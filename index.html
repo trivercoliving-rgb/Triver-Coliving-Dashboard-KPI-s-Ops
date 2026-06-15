@@ -323,10 +323,10 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
         <span class="source-type">Captura reseña por reseña</span>
       </div>
       <div class="source-body">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Ingresa cada reseña del mes. Escala 1–5.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Ingresa cada reseña del mes. Escala 1–5. General se usa para CSAT mensual.</div>
         <div style="overflow-x:auto">
           <table class="review-entry-table">
-            <thead><tr><th>#</th><th>Staff</th><th>Limpieza</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>General</th><th>Staff</th><th>Limpieza</th><th></th></tr></thead>
             <tbody id="expediaRows"></tbody>
           </table>
         </div>
@@ -939,7 +939,7 @@ function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v;}
 // ── ROW BUILDERS ──
 const ROW_CONFIGS={
   airbnb:{ fields:['limpieza','comunicacion','llegada'], labels:['Limpieza','Comunicación','Llegada'] },
-  expedia:{ fields:['overall','staff','limpieza'], labels:['Overall','Staff','Limpieza'] }
+  expedia:{ fields:['overall','staff','limpieza'], labels:['General (1–5)','Staff (1–5)','Limpieza (1–5)'] }
 };
 function buildRows(type, rows){
   const tbody=document.getElementById(type+'Rows');
