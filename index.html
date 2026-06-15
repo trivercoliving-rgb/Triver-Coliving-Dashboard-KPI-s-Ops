@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRIVER — KPIs Operativos</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0D0F14;
+    --surface:   #161920;
+    --surface2:  #1E2230;
+    --border:    #2A2F3F;
+    --text:      #E8EAF0;
+    --muted:     #7A8099;
+    --accent:    #4F7CFF;
+    --accent-dim:#1C2E6A;
+    --green:     #22C97A;
+    --yellow:    #F0B429;
+    --red:       #E53E5A;
+    --green-dim: #0D2E1C;
+    --yellow-dim:#2E2100;
+    --red-dim:   #2E0F16;
+    --radius:    10px;
+    --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .header-controls { display: flex; align-items: center; gap: 10px; }
+  select, button {
+    font-family: var(--font);
+    font-size: 13px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  #monthSelector {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 160px;
+  }
+  #monthSelector:focus { outline: 1px solid var(--accent); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 7px 16px;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #3a67f0; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 6px 12px;
+  }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+
+  /* ── MAIN LAYOUT ── */
+  main { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    margin-top: 32px;
+  }
+
+  /* ── CARDS ── */
+  .cards-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .cards-grid.wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color .15s;
+  }
+  .card:hover { border-color: var(--muted); }
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-value {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .card-value.sm { font-size: 24px; }
+  .card-meta {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.green { background: var(--green); }
+  .dot.yellow { background: var(--yellow); }
+  .dot.red { background: var(--red); }
+  .dot.neutral { background: var(--muted); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .badge.green  { background: var(--green-dim);  color: var(--green); }
+  .badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .badge.red    { background: var(--red-dim);    color: var(--red); }
+  .badge.neutral{ background: var(--surface2);   color: var(--muted); }
+
+  .delta { font-size: 13px; font-weight: 600; }
+  .delta.up   { color: var(--green); }
+  .delta.down { color: var(--red); }
+  .delta.flat { color: var(--muted); }
+
+  /* ── HERO CSAT ── */
+  .csat-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .csat-big { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  .csat-info { flex: 1; min-width: 180px; }
+  .csat-title { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .csat-sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  /* ── CHART ── */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 14px;
+  }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .chart-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .chart-legend { display: flex; gap: 18px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 3px; border-radius: 2px; }
+  canvas#trendChart { width: 100% !important; height: 220px !important; display: block; }
+
+  /* ── NO DATA ── */
+  .no-data {
+    padding: 48px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin-top: 14px;
+  }
+
+  /* ── MODAL ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 620px;
+    padding: 32px;
+    position: relative;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .close-btn { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px; }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+
+  .form-section { margin-bottom: 24px; }
+  .form-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  input[type="number"], input[type="text"], select.form-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  input:focus, select.form-select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .form-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  /* ── DELETE SECTION ── */
+  .delete-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--green); color: #000;
+    font-size: 13px; font-weight: 700;
+    padding: 12px 20px; border-radius: 8px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    header { padding: 14px 16px; }
+    main { padding: 18px 16px 48px; }
+    .csat-hero { padding: 20px; }
+    .csat-big { font-size: 48px; }
+    .form-row, .form-row.three { grid-template-columns: 1fr; }
+    .modal { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TRIVER <span>·</span> KPIs Operativos</div>
+  <div class="header-controls">
+    <select id="monthSelector"></select>
+    <button class="btn-primary" onclick="openModal()">+ Actualizar datos</button>
+  </div>
+</header>
+
+<main>
+  <!-- CSAT HERO -->
+  <div class="section-label">CSAT General</div>
+  <div class="csat-hero" id="csatHero">
+    <div>
+      <div class="csat-title">Score General del Mes</div>
+      <div class="csat-big" id="csatBig">—</div>
+      <div style="margin-top:10px" id="csatBadge"></div>
+    </div>
+    <div class="csat-info" id="csatInfo"></div>
+  </div>
+
+  <!-- HOSTS -->
+  <div class="section-label">KPIs — Hosts</div>
+  <div class="cards-grid" id="hostsCards"></div>
+
+  <!-- HOUSEKEEPING -->
+  <div class="section-label">KPIs — Housekeeping</div>
+  <div class="cards-grid" id="hkCards"></div>
+
+  <!-- CHART -->
+  <div class="section-label">Tendencia — Últimos 6 Meses</div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <span class="chart-title">CSAT · Staff · Limpieza</span>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4F7CFF"></div>CSAT</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22C97A"></div>Staff</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F0B429"></div>Limpieza</div>
+      </div>
+    </div>
+    <canvas id="trendChart"></canvas>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Registrar / Editar Mes</span>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Mes a Registrar</div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Mes</label>
+          <select id="fMes" class="form-select"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">CSAT / Ratings OTA</div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Airbnb Score (1–5)</label>
+          <input type="number" id="fAirbnbScore" min="1" max="5" step="0.01" placeholder="4.80">
+        </div>
+        <div class="form-group">
+          <label>Airbnb Reviews</label>
+          <input type="number" id="fAirbnbReviews" min="0" placeholder="697">
+        </div>
+      </div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Booking Score (1–10)</label>
+          <input type="number" id="fBookingScore" min="1" max="10" step="0.01" placeholder="8.50">
+        </div>
+        <div class="form-group">
+          <label>Booking Reviews</label>
+          <input type="number" id="fBookingReviews" min="0" placeholder="587">
+        </div>
+      </div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Expedia Score (1–10)</label>
+          <input type="number" id="fExpediaScore" min="1" max="10" step="0.01" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label>Expedia Reviews</label>
+          <input type="number" id="fExpediaReviews" min="0" placeholder="Opcional">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Staff Score</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Airbnb Comunicación (1–5)</label>
+          <input type="number" id="fAirbnbComun" min="1" max="5" step="0.01" placeholder="4.80">
+        </div>
+        <div class="form-group">
+          <label>Airbnb Check-in (1–5)</label>
+          <input type="number" id="fAirbnbCheckin" min="1" max="5" step="0.01" placeholder="4.80">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Booking Staff (1–10)</label>
+          <input type="number" id="fBookingStaff" min="1" max="10" step="0.01" placeholder="8.60">
+        </div>
+        <div class="form-group">
+          <label>Expedia Staff (1–10, opcional)</label>
+          <input type="number" id="fExpediaStaff" min="1" max="10" step="0.01" placeholder="Opcional">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Cleanliness Score</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Airbnb Limpieza (1–5)</label>
+          <input type="number" id="fAirbnbLimp" min="1" max="5" step="0.01" placeholder="4.71">
+        </div>
+        <div class="form-group">
+          <label>Booking Limpieza (1–10)</label>
+          <input type="number" id="fBookingLimp" min="1" max="10" step="0.01" placeholder="8.50">
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>Expedia Limpieza (1–10, opcional)</label>
+          <input type="number" id="fExpediaLimp" min="1" max="10" step="0.01" placeholder="Opcional">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Hosts — QA</div>
+      <div class="form-row single">
+        <div class="form-group">
+          <label>% Auditorías Completadas (0–100)</label>
+          <input type="number" id="fQaCompletion" min="0" max="100" step="0.1" placeholder="50">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Housekeeping</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Total Limpiezas del Mes</label>
+          <input type="number" id="fLimpiezas" min="0" placeholder="400">
+        </div>
+        <div class="form-group">
+          <label>% Hallazgos en Auditorías (0–100)</label>
+          <input type="number" id="fHallazgos" min="0" max="100" step="0.1" placeholder="15">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveMonth()">Guardar mes</button>
+    </div>
+
+    <div class="delete-section" id="deleteSection" style="display:none">
+      <button class="btn-danger" onclick="deleteCurrentMonth()">Eliminar este mes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✓ Datos guardados correctamente</div>
+
+<script>
+// ─────────────────────────────────────────
+//  CONSTANTS & STATE
+// ─────────────────────────────────────────
+const STORAGE_KEY = 'triver_kpi_data';
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const YEARS = [2024, 2025, 2026];
+
+// Historical accumulate baselines (from blueprint)
+const HISTORICO = {
+  csat_acumulado:        4.42,
+  staff_score_acumulado: 4.58,
+  cleanliness_acumulado: 4.55
+};
+
+// Pre-loaded seed data (Blueprint §7)
+// Raw OTA data approximated to reproduce the computed scores
+const SEED_MESES = [
+  {
+    mes: 'Agosto 2024',
+    csat:{ airbnb_score:4.62, airbnb_reviews:600, booking_score:8.50, booking_reviews:500, expedia_score:null, expedia_reviews:null },
+    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.60, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.74, booking_limpieza:8.50, expedia_limpieza:null },
+    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
+    hosts:{ qa_completion_pct:42 }
+  },
+  {
+    mes: 'Septiembre 2024',
+    csat:{ airbnb_score:4.55, airbnb_reviews:610, booking_score:8.30, booking_reviews:510, expedia_score:null, expedia_reviews:null },
+    staff:{ airbnb_comunicacion:4.70, airbnb_checkin:4.70, booking_staff:8.40, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.51, booking_limpieza:8.20, expedia_limpieza:null },
+    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
+    hosts:{ qa_completion_pct:19 }
+  },
+  {
+    mes: 'Octubre 2024',
+    csat:{ airbnb_score:4.60, airbnb_reviews:620, booking_score:8.40, booking_reviews:515, expedia_score:null, expedia_reviews:null },
+    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.40, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.45, booking_limpieza:8.20, expedia_limpieza:null },
+    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
+    hosts:{ qa_completion_pct:28 }
+  },
+  {
+    mes: 'Noviembre 2024',
+    csat:{ airbnb_score:4.50, airbnb_reviews:580, booking_score:8.20, booking_reviews:490, expedia_score:null, expedia_reviews:null },
+    staff:{ airbnb_comunicacion:4.50, airbnb_checkin:4.50, booking_staff:8.00, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.55, booking_limpieza:8.20, expedia_limpieza:null },
+    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
+    hosts:{ qa_completion_pct:38 }
+  },
+  {
+    mes: 'Diciembre 2024',
+    csat:{ airbnb_score:4.52, airbnb_reviews:560, booking_score:8.10, booking_reviews:475, expedia_score:null, expedia_reviews:null },
+    staff:{ airbnb_comunicacion:4.50, airbnb_checkin:4.50, booking_staff:8.00, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.44, booking_limpieza:8.00, expedia_limpieza:null },
+    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
+    hosts:{ qa_completion_pct:34 }
+  },
+  {
+    mes: 'Enero 2025',
+    csat:{ airbnb_score:4.62, airbnb_reviews:697, booking_score:8.50, booking_reviews:587, expedia_score:9.0, expedia_reviews:130 },
+    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.60, expedia_staff:null },
+    cleanliness:{ airbnb_limpieza:4.71, booking_limpieza:8.50, expedia_limpieza:9.0 },
+    housekeeping:{ total_limpiezas:421, hallazgos_qa_pct:15 },
+    hosts:{ qa_completion_pct:39 }
+  }
+];
+
+// ─────────────────────────────────────────
+//  DATA LAYER
+// ─────────────────────────────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  // First load: seed
+  const data = { historico: HISTORICO, meses: SEED_MESES };
+  saveData(data);
+  return data;
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ─────────────────────────────────────────
+//  CALCULATIONS
+// ─────────────────────────────────────────
+function calcCSAT(m) {
+  const c = m.csat;
+  let sum = 0, tot = 0;
+  if (c.airbnb_score && c.airbnb_reviews) { sum += c.airbnb_score * c.airbnb_reviews; tot += c.airbnb_reviews; }
+  if (c.booking_score && c.booking_reviews) { sum += (c.booking_score/2) * c.booking_reviews; tot += c.booking_reviews; }
+  if (c.expedia_score && c.expedia_reviews) { sum += (c.expedia_score/2) * c.expedia_reviews; tot += c.expedia_reviews; }
+  return tot > 0 ? sum / tot : null;
+}
+
+function calcStaff(m) {
+  const s = m.staff;
+  const vals = [];
+  if (s.airbnb_comunicacion) vals.push(s.airbnb_comunicacion);
+  if (s.airbnb_checkin) vals.push(s.airbnb_checkin);
+  if (s.booking_staff) vals.push(s.booking_staff / 2);
+  if (s.expedia_staff) vals.push(s.expedia_staff / 2);
+  return vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+}
+
+function calcCleanliness(m) {
+  const cl = m.cleanliness;
+  // Use same review counts from csat section
+  const c = m.csat;
+  let sum = 0, tot = 0;
+  if (cl.airbnb_limpieza && c.airbnb_reviews) { sum += cl.airbnb_limpieza * c.airbnb_reviews; tot += c.airbnb_reviews; }
+  if (cl.booking_limpieza && c.booking_reviews) { sum += (cl.booking_limpieza/2) * c.booking_reviews; tot += c.booking_reviews; }
+  if (cl.expedia_limpieza && c.expedia_reviews) { sum += (cl.expedia_limpieza/2) * c.expedia_reviews; tot += c.expedia_reviews; }
+  return tot > 0 ? sum / tot : null;
+}
+
+function fmt(v, dec=2) { return v !== null && v !== undefined ? v.toFixed(dec) : '—'; }
+
+function semaforo(value, meta, mode='gte') {
+  if (value === null || value === undefined) return 'neutral';
+  if (mode === 'gte') return value >= meta ? 'green' : value >= meta*0.955 ? 'yellow' : 'red';
+  if (mode === 'lte') return value <= meta ? 'green' : value <= meta*1.1 ? 'yellow' : 'red';
+  return 'neutral';
+}
+
+// ─────────────────────────────────────────
+//  MONTH SELECTORS POPULATION
+// ─────────────────────────────────────────
+function populateMonthSelect(selectEl, current) {
+  selectEl.innerHTML = '';
+  YEARS.forEach(y => {
+    MONTHS_ES.forEach((m,i) => {
+      const val = `${m} ${y}`;
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      if (val === current) opt.selected = true;
+      selectEl.appendChild(opt);
+    });
+  });
+}
+
+// ─────────────────────────────────────────
+//  RENDER DASHBOARD
+// ─────────────────────────────────────────
+let appData = null;
+let currentMes = null;
+
+function render() {
+  appData = loadData();
+  const selector = document.getElementById('monthSelector');
+
+  // Populate selector with available months
+  const available = appData.meses.map(m=>m.mes);
+  selector.innerHTML = '';
+  available.forEach(mes => {
+    const opt = document.createElement('option');
+    opt.value = mes; opt.textContent = mes;
+    selector.appendChild(opt);
+  });
+  // Default to last month
+  if (!currentMes || !available.includes(currentMes)) {
+    currentMes = available[available.length - 1];
+  }
+  selector.value = currentMes;
+
+  renderDashboard();
+  renderChart();
+}
+
+function renderDashboard() {
+  const mesData = appData.meses.find(m => m.mes === currentMes);
+  const hist = appData.historico;
+
+  if (!mesData) {
+    document.getElementById('csatBig').textContent = '—';
+    document.getElementById('csatBadge').innerHTML = '';
+    document.getElementById('csatInfo').innerHTML = '<span style="color:var(--muted);font-size:13px">Sin datos para este mes.</span>';
+    document.getElementById('hostsCards').innerHTML = '';
+    document.getElementById('hkCards').innerHTML = '';
+    return;
+  }
+
+  const csat = calcCSAT(mesData);
+  const staff = calcStaff(mesData);
+  const clean = calcCleanliness(mesData);
+  const qa = mesData.hosts.qa_completion_pct;
+  const limp = mesData.housekeeping.total_limpiezas;
+  const hall = mesData.housekeeping.hallazgos_qa_pct;
+
+  // ─ CSAT Hero ─
+  const csatColor = csat === null ? 'var(--muted)' : csat >= 4.5 ? 'var(--green)' : csat >= 4.3 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('csatBig').textContent = csat !== null ? csat.toFixed(2) : '—';
+  document.getElementById('csatBig').style.color = csatColor;
+
+  const csatSem = csat === null ? 'neutral' : csat >= 4.5 ? 'green' : csat >= 4.3 ? 'yellow' : 'red';
+  const csatLabel = csatSem === 'green' ? 'Cumple meta ≥ 4.5' : csatSem === 'yellow' ? 'Por debajo de meta' : 'Bajo — requiere atención';
+  document.getElementById('csatBadge').innerHTML = badge(csatSem, csatLabel);
+
+  const csatDelta = csat !== null ? csat - hist.csat_acumulado : null;
+  document.getElementById('csatInfo').innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">vs. Acumulado histórico (${hist.csat_acumulado.toFixed(2)})</div>
+    ${csatDelta !== null ? `<div class="delta ${csatDelta>=0?'up':'down'}">${csatDelta>=0?'▲':'▼'} ${Math.abs(csatDelta).toFixed(2)} pts</div>` : ''}
+    <div style="font-size:12px;color:var(--muted);margin-top:12px">Meta: ≥ 4.5 / 5.0</div>
+  `;
+
+  // ─ Hosts Cards ─
+  const staffDelta = staff !== null ? staff - hist.staff_score_acumulado : null;
+  const staffSem = staffDelta !== null ? (staffDelta >= 0.03 ? 'green' : staffDelta >= -0.05 ? 'yellow' : 'red') : 'neutral';
+  const qaSem = qa !== null ? (qa >= 50 ? 'green' : qa >= 40 ? 'yellow' : 'red') : 'neutral';
+
+  document.getElementById('hostsCards').innerHTML = `
+    ${card('Staff Score', staff !== null ? staff.toFixed(2) : '—', `Acum. ${hist.staff_score_acumulado.toFixed(2)}`, staffSem, staffDelta, 'Meta: +0.03 sobre histórico')}
+    ${card('% Auditorías QA', qa !== null ? qa.toFixed(1)+'%' : '—', '', qaSem, null, 'Meta: > 50%')}
+  `;
+
+  // ─ HK Cards ─
+  const cleanDelta = clean !== null ? clean - hist.cleanliness_acumulado : null;
+  const cleanSem = cleanDelta !== null ? (cleanDelta >= 0.03 ? 'green' : cleanDelta >= -0.05 ? 'yellow' : 'red') : 'neutral';
+  const limpSem = limp !== null ? (limp >= 400 ? 'green' : limp >= 360 ? 'yellow' : 'red') : 'neutral';
+
+  document.getElementById('hkCards').innerHTML = `
+    ${card('Cleanliness Score', clean !== null ? clean.toFixed(2) : '—', `Acum. ${hist.cleanliness_acumulado.toFixed(2)}`, cleanSem, cleanDelta, 'Meta: +0.03 sobre histórico')}
+    ${card('Total Limpiezas', limp !== null ? limp.toString() : '—', '', limpSem, null, 'Meta: ≥ 400 por mes')}
+    ${card('% Hallazgos QA HK', hall !== null ? hall.toFixed(1)+'%' : '—', '', 'neutral', null, 'Menor es mejor')}
+  `;
+}
+
+function badge(sem, label) {
+  return `<span class="badge ${sem}"><span class="dot ${sem}"></span>${label}</span>`;
+}
+
+function card(label, value, sub, sem, delta, meta) {
+  const deltaHtml = delta !== null
+    ? `<span class="delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(2)}</span>`
+    : '';
+  return `
+    <div class="card">
+      <div class="card-label"><span class="dot ${sem}"></span>${label}</div>
+      <div class="card-value sm">${value}</div>
+      <div class="card-meta">
+        ${deltaHtml}
+        ${sub ? `<span>${sub}</span>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">${meta}</div>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────
+//  CHART
+// ─────────────────────────────────────────
+function renderChart() {
+  const canvas = document.getElementById('trendChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Get last 6 months
+  const slice = appData.meses.slice(-6);
+  if (slice.length < 2) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+
+  // Set canvas resolution
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight || 220;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const labels = slice.map(m => m.mes.split(' ')[0].substring(0,3));
+  const csatSeries  = slice.map(m => calcCSAT(m));
+  const staffSeries = slice.map(m => calcStaff(m));
+  const cleanSeries = slice.map(m => calcCleanliness(m));
+
+  const PAD = { top:20, right:20, bottom:36, left:40 };
+  const gW = W - PAD.left - PAD.right;
+  const gH = H - PAD.top - PAD.bottom;
+
+  const minY = 3.8, maxY = 5.0;
+  function toX(i) { return PAD.left + (i / (slice.length-1)) * gW; }
+  function toY(v) { return PAD.top + gH - ((v - minY) / (maxY - minY)) * gH; }
+
+  // Background grid
+  ctx.strokeStyle = '#2A2F3F';
+  ctx.lineWidth = 1;
+  [3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0].forEach(v => {
+    const y = toY(v);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left+gW, y); ctx.stroke();
+    ctx.fillStyle = '#7A8099'; ctx.font = '10px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(1), PAD.left - 6, y + 3.5);
+  });
+
+  // X labels
+  ctx.fillStyle = '#7A8099'; ctx.textAlign = 'center';
+  labels.forEach((l,i) => { ctx.fillText(l, toX(i), H - PAD.bottom + 16); });
+
+  // Lines
+  function drawLine(series, color) {
+    const pts = series.map((v,i) => v !== null ? {x: toX(i), y: toY(v)} : null).filter(Boolean);
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+    // Dots
+    pts.forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+  }
+
+  drawLine(csatSeries,  '#4F7CFF');
+  drawLine(staffSeries, '#22C97A');
+  drawLine(cleanSeries, '#F0B429');
+}
+
+// ─────────────────────────────────────────
+//  MODAL
+// ─────────────────────────────────────────
+function openModal(prefillMes) {
+  const target = prefillMes || currentMes;
+  const formMes = document.getElementById('fMes');
+  populateMonthSelect(formMes, target);
+
+  // Prefill if data exists
+  const existing = appData.meses.find(m => m.mes === target);
+  clearForm();
+  if (existing) fillForm(existing);
+
+  const delSec = document.getElementById('deleteSection');
+  delSec.style.display = existing ? 'flex' : 'none';
+
+  document.getElementById('modalBackdrop').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+}
+
+function clearForm() {
+  ['fAirbnbScore','fAirbnbReviews','fBookingScore','fBookingReviews',
+   'fExpediaScore','fExpediaReviews','fAirbnbComun','fAirbnbCheckin',
+   'fBookingStaff','fExpediaStaff','fAirbnbLimp','fBookingLimp',
+   'fExpediaLimp','fQaCompletion','fLimpiezas','fHallazgos'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function fillForm(m) {
+  const set = (id, v) => { if (v !== null && v !== undefined) document.getElementById(id).value = v; };
+  set('fAirbnbScore', m.csat.airbnb_score);
+  set('fAirbnbReviews', m.csat.airbnb_reviews);
+  set('fBookingScore', m.csat.booking_score);
+  set('fBookingReviews', m.csat.booking_reviews);
+  set('fExpediaScore', m.csat.expedia_score);
+  set('fExpediaReviews', m.csat.expedia_reviews);
+  set('fAirbnbComun', m.staff.airbnb_comunicacion);
+  set('fAirbnbCheckin', m.staff.airbnb_checkin);
+  set('fBookingStaff', m.staff.booking_staff);
+  set('fExpediaStaff', m.staff.expedia_staff);
+  set('fAirbnbLimp', m.cleanliness.airbnb_limpieza);
+  set('fBookingLimp', m.cleanliness.booking_limpieza);
+  set('fExpediaLimp', m.cleanliness.expedia_limpieza);
+  set('fQaCompletion', m.hosts.qa_completion_pct);
+  set('fLimpiezas', m.housekeeping.total_limpiezas);
+  set('fHallazgos', m.housekeeping.hallazgos_qa_pct);
+}
+
+function getNum(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? null : v;
+}
+
+function saveMonth() {
+  const mes = document.getElementById('fMes').value;
+
+  // Validate required fields
+  const airbnbScore = getNum('fAirbnbScore');
+  const airbnbReviews = getNum('fAirbnbReviews');
+  const bookingScore = getNum('fBookingScore');
+  const bookingReviews = getNum('fBookingReviews');
+  if (!airbnbScore || !airbnbReviews || !bookingScore || !bookingReviews) {
+    alert('Por favor completa los campos obligatorios: Airbnb Score, Airbnb Reviews, Booking Score y Booking Reviews.');
+    return;
+  }
+
+  const newEntry = {
+    mes,
+    csat: {
+      airbnb_score: airbnbScore, airbnb_reviews: airbnbReviews,
+      booking_score: bookingScore, booking_reviews: bookingReviews,
+      expedia_score: getNum('fExpediaScore'), expedia_reviews: getNum('fExpediaReviews')
+    },
+    staff: {
+      airbnb_comunicacion: getNum('fAirbnbComun'),
+      airbnb_checkin: getNum('fAirbnbCheckin'),
+      booking_staff: getNum('fBookingStaff'),
+      expedia_staff: getNum('fExpediaStaff')
+    },
+    cleanliness: {
+      airbnb_limpieza: getNum('fAirbnbLimp'),
+      booking_limpieza: getNum('fBookingLimp'),
+      expedia_limpieza: getNum('fExpediaLimp')
+    },
+    hosts: { qa_completion_pct: getNum('fQaCompletion') },
+    housekeeping: { total_limpiezas: getNum('fLimpiezas'), hallazgos_qa_pct: getNum('fHallazgos') }
+  };
+
+  const data = loadData();
+  const idx = data.meses.findIndex(m => m.mes === mes);
+  if (idx >= 0) { data.meses[idx] = newEntry; }
+  else {
+    // Insert in chronological order
+    data.meses.push(newEntry);
+    data.meses.sort((a,b) => {
+      const parse = s => { const [mo,yr] = s.split(' '); return parseInt(yr)*12 + MONTHS_ES.indexOf(mo); };
+      return parse(a.mes) - parse(b.mes);
+    });
+  }
+  saveData(data);
+  currentMes = mes;
+  closeModal();
+  render();
+  showToast('Datos guardados correctamente');
+}
+
+function deleteCurrentMonth() {
+  const mes = document.getElementById('fMes').value;
+  if (!confirm(`¿Eliminar los datos de ${mes}? Esta acción no se puede deshacer.`)) return;
+  const data = loadData();
+  data.meses = data.meses.filter(m => m.mes !== mes);
+  saveData(data);
+  currentMes = null;
+  closeModal();
+  render();
+  showToast('Mes eliminado');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────
+//  EVENTS
+// ─────────────────────────────────────────
+document.getElementById('monthSelector').addEventListener('change', e => {
+  currentMes = e.target.value;
+  renderDashboard();
+});
+
+document.getElementById('modalBackdrop').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+window.addEventListener('resize', () => { renderChart(); });
+
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
