@@ -5,304 +5,166 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TRIVER — KPIs Operativos</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D0F14;--surface:#161920;--surface2:#1E2230;--border:#2A2F3F;
+  --text:#E8EAF0;--muted:#7A8099;--accent:#4F7CFF;--accent-dim:#1C2E6A;
+  --green:#22C97A;--yellow:#F0B429;--red:#E53E5A;
+  --green-dim:#0D2E1C;--yellow-dim:#2E2100;--red-dim:#2E0F16;
+  --radius:10px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
 
-  :root {
-    --bg:        #0D0F14;
-    --surface:   #161920;
-    --surface2:  #1E2230;
-    --border:    #2A2F3F;
-    --text:      #E8EAF0;
-    --muted:     #7A8099;
-    --accent:    #4F7CFF;
-    --accent-dim:#1C2E6A;
-    --green:     #22C97A;
-    --yellow:    #F0B429;
-    --red:       #E53E5A;
-    --green-dim: #0D2E1C;
-    --yellow-dim:#2E2100;
-    --red-dim:   #2E0F16;
-    --radius:    10px;
-    --font:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  }
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100;gap:12px;flex-wrap:wrap}
+.logo{font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.logo span{color:var(--accent)}
+.header-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+select,button{font-family:var(--font);font-size:13px;border-radius:var(--radius);cursor:pointer}
+#monthSelector{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:7px 12px;min-width:160px;appearance:none}
+.btn-primary{background:var(--accent);color:#fff;border:none;padding:7px 16px;font-weight:600}
+.btn-primary:hover{background:#3a67f0}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 14px}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid var(--red);padding:6px 12px}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
 
-  body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    line-height: 1.5;
-  }
+/* TABS */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding:0 32px;background:var(--bg)}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
 
-  /* ── HEADER ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 32px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 100;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .logo {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-  .logo span { color: var(--accent); }
-  .header-controls { display: flex; align-items: center; gap: 10px; }
-  select, button {
-    font-family: var(--font);
-    font-size: 13px;
-    border-radius: var(--radius);
-    cursor: pointer;
-  }
-  #monthSelector {
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 7px 12px;
-    appearance: none;
-    -webkit-appearance: none;
-    min-width: 160px;
-  }
-  #monthSelector:focus { outline: 1px solid var(--accent); }
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 7px 16px;
-    font-weight: 600;
-  }
-  .btn-primary:hover { background: #3a67f0; }
-  .btn-ghost {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    padding: 7px 14px;
-  }
-  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
-  .btn-danger {
-    background: var(--red-dim);
-    color: var(--red);
-    border: 1px solid var(--red);
-    padding: 6px 12px;
-  }
-  .btn-danger:hover { background: var(--red); color: #fff; }
+/* MAIN */
+main{padding:24px 32px 60px;max-width:1280px;margin:0 auto}
+.section-label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;margin-top:28px}
 
-  /* ── MAIN LAYOUT ── */
-  main { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
+/* CARDS */
+.cards-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+.card:hover{border-color:var(--muted)}
+.card-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px}
+.card-value{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.card-meta{font-size:12px;color:var(--muted)}
+.card-hint{font-size:11px;color:var(--muted);margin-top:2px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.green{background:var(--green)}.dot.yellow{background:var(--yellow)}.dot.red{background:var(--red)}.dot.neutral{background:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
+.badge.green{background:var(--green-dim);color:var(--green)}
+.badge.yellow{background:var(--yellow-dim);color:var(--yellow)}
+.badge.red{background:var(--red-dim);color:var(--red)}
+.badge.neutral{background:var(--surface2);color:var(--muted)}
+.delta{font-size:13px;font-weight:600}
+.delta.up{color:var(--green)}.delta.down{color:var(--red)}.delta.flat{color:var(--muted)}
 
-  .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 14px;
-    margin-top: 32px;
-  }
+/* CSAT HERO */
+.csat-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;display:flex;align-items:center;gap:40px;flex-wrap:wrap}
+.csat-big{font-size:56px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.csat-info{flex:1;min-width:160px}
+.csat-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 
-  /* ── CARDS ── */
-  .cards-grid {
-    display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  }
-  .cards-grid.wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+/* BREAKDOWN TABLE */
+.breakdown{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:12px}
+.breakdown table{width:100%;border-collapse:collapse;font-size:12px}
+.breakdown th{background:var(--surface2);color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;text-align:left;font-weight:600}
+.breakdown td{padding:10px 14px;border-top:1px solid var(--border);color:var(--text)}
+.breakdown td.num{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.breakdown td.muted{color:var(--muted)}
+.breakdown tr:hover td{background:var(--surface2)}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: border-color .15s;
-  }
-  .card:hover { border-color: var(--muted); }
-  .card-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .card-value {
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -.02em;
-    line-height: 1;
-    color: var(--text);
-  }
-  .card-value.sm { font-size: 24px; }
-  .card-meta {
-    font-size: 12px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .dot.green { background: var(--green); }
-  .dot.yellow { background: var(--yellow); }
-  .dot.red { background: var(--red); }
-  .dot.neutral { background: var(--muted); }
+/* CHART */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-top:12px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.chart-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.legend-dot{width:10px;height:3px;border-radius:2px}
+canvas#trendChart{width:100%!important;height:200px!important;display:block}
 
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 20px;
-  }
-  .badge.green  { background: var(--green-dim);  color: var(--green); }
-  .badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
-  .badge.red    { background: var(--red-dim);    color: var(--red); }
-  .badge.neutral{ background: var(--surface2);   color: var(--muted); }
+/* ── CAPTURA DE DATOS TAB ── */
+.sources-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));margin-top:12px}
+.source-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.source-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.source-name{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.source-type{font-size:10px;color:var(--muted);font-weight:600}
+.source-body{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
 
-  .delta { font-size: 13px; font-weight: 600; }
-  .delta.up   { color: var(--green); }
-  .delta.down { color: var(--red); }
-  .delta.flat { color: var(--muted); }
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim)}
+.upload-zone input{display:none}
+.upload-icon{font-size:22px;margin-bottom:6px;opacity:.5}
+.upload-label{font-size:12px;color:var(--muted)}
+.upload-label strong{color:var(--accent)}
+.upload-status{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:6px;display:none}
+.upload-status.ok{background:var(--green-dim);color:var(--green);display:block}
+.upload-status.err{background:var(--red-dim);color:var(--red);display:block}
 
-  /* ── HERO CSAT ── */
-  .csat-hero {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px 32px;
-    display: flex;
-    align-items: center;
-    gap: 40px;
-    flex-wrap: wrap;
-  }
-  .csat-big { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-  .csat-info { flex: 1; min-width: 180px; }
-  .csat-title { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .csat-sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+/* Review entry table */
+.review-entry-table{width:100%;border-collapse:collapse;font-size:12px}
+.review-entry-table th{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:5px 6px;text-align:center;font-weight:600}
+.review-entry-table th:first-child{text-align:left}
+.review-entry-table td{padding:4px 4px;border-top:1px solid var(--border)}
+.review-entry-table td input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:5px 7px;text-align:center;font-family:var(--font)}
+.review-entry-table td input:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+.review-entry-table td:first-child input{text-align:left}
+.add-row-btn{font-size:11px;color:var(--accent);background:none;border:1px dashed var(--accent-dim);border-radius:6px;padding:5px 10px;cursor:pointer;width:100%;margin-top:6px}
+.add-row-btn:hover{background:var(--accent-dim)}
+.remove-row-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1}
+.remove-row-btn:hover{color:var(--red)}
 
-  /* ── CHART ── */
-  .chart-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-top: 14px;
-  }
-  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-  .chart-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .chart-legend { display: flex; gap: 18px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-  .legend-dot { width: 10px; height: 3px; border-radius: 2px; }
-  canvas#trendChart { width: 100% !important; height: 220px !important; display: block; }
+/* Manual score inputs */
+.score-group{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.score-input-wrap{display:flex;flex-direction:column;gap:4px}
+.score-input-wrap label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.score-input-wrap input{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;padding:7px 10px;width:100%}
+.score-input-wrap input:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+.score-input-wrap .hint{font-size:10px;color:var(--muted);margin-top:2px}
 
-  /* ── NO DATA ── */
-  .no-data {
-    padding: 48px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 14px;
-    background: var(--surface);
-    border: 1px dashed var(--border);
-    border-radius: var(--radius);
-    margin-top: 14px;
-  }
+/* Summary preview inside capture tab */
+.capture-summary{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-top:16px}
+.capture-summary-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.summary-row:last-child{border-bottom:none}
+.summary-label{color:var(--muted)}
+.summary-val{font-weight:700;font-variant-numeric:tabular-nums}
 
-  /* ── MODAL ── */
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.75);
-    z-index: 200;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 32px 16px;
-    overflow-y: auto;
-  }
-  .modal-backdrop.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    width: 100%;
-    max-width: 620px;
-    padding: 32px;
-    position: relative;
-  }
-  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
-  .modal-title { font-size: 16px; font-weight: 700; }
-  .close-btn { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 6px; }
-  .close-btn:hover { background: var(--surface2); color: var(--text); }
+/* OPS KPIs */
+.ops-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:12px}
+.ops-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.ops-row.three{grid-template-columns:1fr 1fr 1fr}
 
-  .form-section { margin-bottom: 24px; }
-  .form-section-title {
-    font-size: 10px; font-weight: 700; letter-spacing: .15em;
-    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
-    padding-bottom: 8px; border-bottom: 1px solid var(--border);
-  }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
-  .form-row.single { grid-template-columns: 1fr; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  label {
-    font-size: 11px; font-weight: 600; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .06em;
-  }
-  input[type="number"], input[type="text"], select.form-select {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 13px;
-    padding: 8px 10px;
-    width: 100%;
-  }
-  input:focus, select.form-select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
-  input::placeholder { color: var(--muted); }
-  .form-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+/* MONTH SELECTOR BAR */
+.month-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px}
+.month-label{font-size:13px;font-weight:600;color:var(--text)}
+.month-actions{display:flex;gap:8px}
 
-  /* ── DELETE SECTION ── */
-  .delete-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+/* MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:440px;padding:28px;position:relative}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.modal input.big{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font);font-size:14px;padding:9px 12px;margin-bottom:16px}
+.modal input.big:focus{outline:1px solid var(--accent);border-color:var(--accent)}
 
-  /* ── TOAST ── */
-  #toast {
-    position: fixed; bottom: 28px; right: 28px;
-    background: var(--green); color: #000;
-    font-size: 13px; font-weight: 700;
-    padding: 12px 20px; border-radius: 8px;
-    opacity: 0; pointer-events: none;
-    transition: opacity .25s;
-    z-index: 999;
-  }
-  #toast.show { opacity: 1; }
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;font-size:13px;font-weight:700;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:999}
+#toast.show{opacity:1}
+#toast.err{background:var(--red);color:#fff}
 
-  /* ── RESPONSIVE ── */
-  @media (max-width: 640px) {
-    header { padding: 14px 16px; }
-    main { padding: 18px 16px 48px; }
-    .csat-hero { padding: 20px; }
-    .csat-big { font-size: 48px; }
-    .form-row, .form-row.three { grid-template-columns: 1fr; }
-    .modal { padding: 20px; }
-  }
+/* RESPONSIVE */
+@media(max-width:640px){
+  header,main{padding-left:16px;padding-right:16px}
+  .tabs{padding:0 16px}
+  .csat-hero{padding:18px}
+  .csat-big{font-size:44px}
+  .ops-row,.ops-row.three,.score-group{grid-template-columns:1fr}
+  .sources-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -311,12 +173,18 @@
   <div class="logo">TRIVER <span>·</span> KPIs Operativos</div>
   <div class="header-controls">
     <select id="monthSelector"></select>
-    <button class="btn-primary" onclick="openModal()">+ Actualizar datos</button>
+    <button class="btn-primary" onclick="openNewMonthModal()">+ Nuevo mes</button>
   </div>
 </header>
 
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('capture',this)">Captura de datos</button>
+</div>
+
+<!-- ═══════════════ TAB: DASHBOARD ═══════════════ -->
+<div id="tab-dashboard" class="tab-panel active">
 <main>
-  <!-- CSAT HERO -->
   <div class="section-label">CSAT General</div>
   <div class="csat-hero" id="csatHero">
     <div>
@@ -327,15 +195,15 @@
     <div class="csat-info" id="csatInfo"></div>
   </div>
 
-  <!-- HOSTS -->
+  <!-- Breakdown por OTA -->
+  <div class="breakdown" id="csatBreakdown" style="margin-top:12px"></div>
+
   <div class="section-label">KPIs — Hosts</div>
   <div class="cards-grid" id="hostsCards"></div>
 
-  <!-- HOUSEKEEPING -->
   <div class="section-label">KPIs — Housekeeping</div>
   <div class="cards-grid" id="hkCards"></div>
 
-  <!-- CHART -->
   <div class="section-label">Tendencia — Últimos 6 Meses</div>
   <div class="chart-card">
     <div class="chart-header">
@@ -349,608 +217,907 @@
     <canvas id="trendChart"></canvas>
   </div>
 </main>
+</div>
 
-<!-- MODAL -->
-<div class="modal-backdrop" id="modalBackdrop">
+<!-- ═══════════════ TAB: CAPTURA ═══════════════ -->
+<div id="tab-capture" class="tab-panel">
+<main>
+  <div class="month-bar">
+    <div>
+      <div class="section-label" style="margin:0 0 2px">Capturando datos para</div>
+      <div class="month-label" id="captureMonthLabel">—</div>
+    </div>
+    <div class="month-actions">
+      <button class="btn-danger btn-sm" id="deleteMonthBtn" onclick="confirmDeleteMonth()">Eliminar mes</button>
+      <button class="btn-primary btn-sm" onclick="saveAllCapture()">Guardar todo</button>
+    </div>
+  </div>
+
+  <div class="sources-grid">
+
+    <!-- ── BOOKING (CSV) ── -->
+    <div class="source-card">
+      <div class="source-header">
+        <span class="source-name">Booking.com</span>
+        <span class="source-type">CSV automático</span>
+      </div>
+      <div class="source-body">
+        <div class="upload-zone" id="bookingZone" onclick="document.getElementById('bookingFile').click()" ondragover="dragOver(event,'bookingZone')" ondragleave="dragLeave('bookingZone')" ondrop="dropFile(event,'booking')">
+          <input type="file" id="bookingFile" accept=".csv" onchange="processBookingCSV(this)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Arrastra el CSV de Booking aquí<br>o <strong>haz clic para seleccionar</strong></div>
+        </div>
+        <div class="upload-status" id="bookingStatus"></div>
+        <div id="bookingPreview"></div>
+      </div>
+    </div>
+
+    <!-- ── GOOGLE (CSV Takeout) ── -->
+    <div class="source-card">
+      <div class="source-header">
+        <span class="source-name">Google Reviews</span>
+        <span class="source-type">CSV Takeout automático</span>
+      </div>
+      <div class="source-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Exporta desde <strong style="color:var(--text)">takeout.google.com</strong> → Google Business Profile → sube el CSV aquí.</div>
+        <div class="upload-zone" id="googleZone" onclick="document.getElementById('googleFile').click()" ondragover="dragOver(event,'googleZone')" ondragleave="dragLeave('googleZone')" ondrop="dropFile(event,'google')">
+          <input type="file" id="googleFile" accept=".csv,.json" onchange="processGoogleCSV(this)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Arrastra el CSV de Google Takeout<br>o <strong>haz clic para seleccionar</strong></div>
+        </div>
+        <div class="upload-status" id="googleStatus"></div>
+        <div id="googlePreview"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">O captura manualmente:</div>
+        <div class="score-group">
+          <div class="score-input-wrap">
+            <label>Score promedio (1–5)</label>
+            <input type="number" id="googleScore" min="1" max="5" step="0.1" placeholder="4.5">
+          </div>
+          <div class="score-input-wrap">
+            <label># Reseñas del mes</label>
+            <input type="number" id="googleReviews" min="0" placeholder="12">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AIRBNB (manual por reseña) ── -->
+    <div class="source-card" style="grid-column: span 2">
+      <div class="source-header">
+        <span class="source-name">Airbnb</span>
+        <span class="source-type">Captura manual por reseña</span>
+      </div>
+      <div class="source-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Captura cada reseña del mes. El sistema calculará los promedios ponderados automáticamente. Escala 1–5.</div>
+        <div style="overflow-x:auto">
+          <table class="review-entry-table" id="airbnbTable">
+            <thead>
+              <tr>
+                <th style="text-align:left;min-width:100px">Huésped (opcional)</th>
+                <th>General</th>
+                <th>Limpieza</th>
+                <th>Comunicación</th>
+                <th>Llegada</th>
+                <th style="width:30px"></th>
+              </tr>
+            </thead>
+            <tbody id="airbnbRows"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addAirbnbRow()">+ Agregar reseña</button>
+        <div id="airbnbCalc" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- ── EXPEDIA (manual por reseña) ── -->
+    <div class="source-card">
+      <div class="source-header">
+        <span class="source-name">Expedia</span>
+        <span class="source-type">Captura manual por reseña</span>
+      </div>
+      <div class="source-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Captura cada reseña. El sistema calcula promedios. Escala 1–5.</div>
+        <div style="overflow-x:auto">
+          <table class="review-entry-table" id="expediaTable">
+            <thead>
+              <tr>
+                <th style="text-align:left;min-width:80px">Huésped</th>
+                <th>General</th>
+                <th>Staff</th>
+                <th>Limpieza</th>
+                <th style="width:30px"></th>
+              </tr>
+            </thead>
+            <tbody id="expediaRows"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addExpediaRow()">+ Agregar reseña</button>
+        <div id="expediaCalc" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- ── HOSTELWORLD (manual) ── -->
+    <div class="source-card">
+      <div class="source-header">
+        <span class="source-name">HostelWorld</span>
+        <span class="source-type">Captura manual</span>
+      </div>
+      <div class="source-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Solo Overall Score para CSAT. Escala 1–10 (se normaliza a 1–5 automáticamente).</div>
+        <div class="score-group">
+          <div class="score-input-wrap">
+            <label>Score (1–10)</label>
+            <input type="number" id="hwScore" min="1" max="10" step="0.1" placeholder="8.5">
+            <span class="hint">Se divide entre 2 → escala 1–5</span>
+          </div>
+          <div class="score-input-wrap">
+            <label># Reseñas del mes</label>
+            <input type="number" id="hwReviews" min="0" placeholder="5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── OPS KPIs ── -->
+    <div class="source-card" style="grid-column: span 2">
+      <div class="source-header">
+        <span class="source-name">KPIs Operativos</span>
+        <span class="source-type">Hosts · Housekeeping</span>
+      </div>
+      <div class="source-body">
+        <div class="ops-row three">
+          <div class="score-input-wrap">
+            <label>% Auditorías QA completadas</label>
+            <input type="number" id="opsQaCompletion" min="0" max="100" step="0.1" placeholder="50">
+            <span class="hint">Meta: &gt; 50%</span>
+          </div>
+          <div class="score-input-wrap">
+            <label>Total limpiezas del mes</label>
+            <input type="number" id="opsLimpiezas" min="0" placeholder="400">
+            <span class="hint">Meta: ≥ 400</span>
+          </div>
+          <div class="score-input-wrap">
+            <label>% Hallazgos en auditorías HK</label>
+            <input type="number" id="opsHallazgos" min="0" max="100" step="0.1" placeholder="15">
+            <span class="hint">Menor es mejor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /sources-grid -->
+
+  <!-- PREVIEW PONDERADO -->
+  <div class="section-label" style="margin-top:28px">Vista previa — KPIs calculados para este mes</div>
+  <div class="capture-summary" id="captureSummary">
+    <div class="capture-summary-title">Pendiente de calcular — completa los datos arriba</div>
+  </div>
+
+</main>
+</div>
+
+<!-- MODAL NUEVO MES -->
+<div class="modal-backdrop" id="newMonthModal">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Registrar / Editar Mes</span>
-      <button class="close-btn" onclick="closeModal()">✕</button>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">Mes a Registrar</div>
-      <div class="form-row single">
-        <div class="form-group">
-          <label>Mes</label>
-          <select id="fMes" class="form-select"></select>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">CSAT / Ratings OTA</div>
-      <div class="form-row three">
-        <div class="form-group">
-          <label>Airbnb Score (1–5)</label>
-          <input type="number" id="fAirbnbScore" min="1" max="5" step="0.01" placeholder="4.80">
-        </div>
-        <div class="form-group">
-          <label>Airbnb Reviews</label>
-          <input type="number" id="fAirbnbReviews" min="0" placeholder="697">
-        </div>
-      </div>
-      <div class="form-row three">
-        <div class="form-group">
-          <label>Booking Score (1–10)</label>
-          <input type="number" id="fBookingScore" min="1" max="10" step="0.01" placeholder="8.50">
-        </div>
-        <div class="form-group">
-          <label>Booking Reviews</label>
-          <input type="number" id="fBookingReviews" min="0" placeholder="587">
-        </div>
-      </div>
-      <div class="form-row three">
-        <div class="form-group">
-          <label>Expedia Score (1–10)</label>
-          <input type="number" id="fExpediaScore" min="1" max="10" step="0.01" placeholder="Opcional">
-        </div>
-        <div class="form-group">
-          <label>Expedia Reviews</label>
-          <input type="number" id="fExpediaReviews" min="0" placeholder="Opcional">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">Staff Score</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Airbnb Comunicación (1–5)</label>
-          <input type="number" id="fAirbnbComun" min="1" max="5" step="0.01" placeholder="4.80">
-        </div>
-        <div class="form-group">
-          <label>Airbnb Check-in (1–5)</label>
-          <input type="number" id="fAirbnbCheckin" min="1" max="5" step="0.01" placeholder="4.80">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Booking Staff (1–10)</label>
-          <input type="number" id="fBookingStaff" min="1" max="10" step="0.01" placeholder="8.60">
-        </div>
-        <div class="form-group">
-          <label>Expedia Staff (1–10, opcional)</label>
-          <input type="number" id="fExpediaStaff" min="1" max="10" step="0.01" placeholder="Opcional">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">Cleanliness Score</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Airbnb Limpieza (1–5)</label>
-          <input type="number" id="fAirbnbLimp" min="1" max="5" step="0.01" placeholder="4.71">
-        </div>
-        <div class="form-group">
-          <label>Booking Limpieza (1–10)</label>
-          <input type="number" id="fBookingLimp" min="1" max="10" step="0.01" placeholder="8.50">
-        </div>
-      </div>
-      <div class="form-row single">
-        <div class="form-group">
-          <label>Expedia Limpieza (1–10, opcional)</label>
-          <input type="number" id="fExpediaLimp" min="1" max="10" step="0.01" placeholder="Opcional">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">Hosts — QA</div>
-      <div class="form-row single">
-        <div class="form-group">
-          <label>% Auditorías Completadas (0–100)</label>
-          <input type="number" id="fQaCompletion" min="0" max="100" step="0.1" placeholder="50">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section">
-      <div class="form-section-title">Housekeeping</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Total Limpiezas del Mes</label>
-          <input type="number" id="fLimpiezas" min="0" placeholder="400">
-        </div>
-        <div class="form-group">
-          <label>% Hallazgos en Auditorías (0–100)</label>
-          <input type="number" id="fHallazgos" min="0" max="100" step="0.1" placeholder="15">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-footer">
-      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn-primary" onclick="saveMonth()">Guardar mes</button>
-    </div>
-
-    <div class="delete-section" id="deleteSection" style="display:none">
-      <button class="btn-danger" onclick="deleteCurrentMonth()">Eliminar este mes</button>
+    <div class="modal-title">Crear nuevo mes</div>
+    <p>Selecciona el mes y año para comenzar a capturar datos.</p>
+    <select id="newMonthSelect" class="modal input.big" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font);font-size:14px;padding:9px 12px;margin-bottom:16px;appearance:none"></select>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeNewMonthModal()">Cancelar</button>
+      <button class="btn-primary" onclick="createNewMonth()">Crear mes</button>
     </div>
   </div>
 </div>
 
-<div id="toast">✓ Datos guardados correctamente</div>
+<!-- MODAL CONFIRMAR ELIMINAR -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Eliminar mes</div>
+    <p id="deleteModalMsg"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn-danger" onclick="executeDeleteMonth()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-// ─────────────────────────────────────────
-//  CONSTANTS & STATE
-// ─────────────────────────────────────────
-const STORAGE_KEY = 'triver_kpi_data';
+// ═══════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════
+const STORAGE_KEY = 'triver_kpi_v2';
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const YEARS = [2024, 2025, 2026];
+const YEARS = [2024,2025,2026];
 
-// Historical accumulate baselines (from blueprint)
 const HISTORICO = {
-  csat_acumulado:        4.42,
+  csat_acumulado: 4.42,
   staff_score_acumulado: 4.58,
   cleanliness_acumulado: 4.55
 };
 
-// Pre-loaded seed data (Blueprint §7)
-// Raw OTA data approximated to reproduce the computed scores
-const SEED_MESES = [
-  {
-    mes: 'Agosto 2024',
-    csat:{ airbnb_score:4.62, airbnb_reviews:600, booking_score:8.50, booking_reviews:500, expedia_score:null, expedia_reviews:null },
-    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.60, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.74, booking_limpieza:8.50, expedia_limpieza:null },
-    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
-    hosts:{ qa_completion_pct:42 }
+// Seed data — 6 meses pre-cargados (Blueprint §7)
+const SEED = [
+  { mes:'Agosto 2024',
+    booking:{ reviews:[], computed:{ overall:4.42, staff:4.65, cleanliness:4.74 }, review_count:500 },
+    airbnb:{ reviews:[], computed:{ overall:4.55, cleanliness:4.74, comunicacion:4.80, llegada:4.80 }, review_count:600 },
+    expedia:{ reviews:[], computed:{ overall:null, staff:null, cleanliness:null }, review_count:0 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:42, limpiezas:null, hallazgos:null }
   },
-  {
-    mes: 'Septiembre 2024',
-    csat:{ airbnb_score:4.55, airbnb_reviews:610, booking_score:8.30, booking_reviews:510, expedia_score:null, expedia_reviews:null },
-    staff:{ airbnb_comunicacion:4.70, airbnb_checkin:4.70, booking_staff:8.40, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.51, booking_limpieza:8.20, expedia_limpieza:null },
-    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
-    hosts:{ qa_completion_pct:19 }
+  { mes:'Septiembre 2024',
+    booking:{ reviews:[], computed:{ overall:4.20, staff:4.55, cleanliness:4.51 }, review_count:510 },
+    airbnb:{ reviews:[], computed:{ overall:4.50, cleanliness:4.51, comunicacion:4.70, llegada:4.70 }, review_count:610 },
+    expedia:{ reviews:[], computed:{ overall:null, staff:null, cleanliness:null }, review_count:0 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:19, limpiezas:null, hallazgos:null }
   },
-  {
-    mes: 'Octubre 2024',
-    csat:{ airbnb_score:4.60, airbnb_reviews:620, booking_score:8.40, booking_reviews:515, expedia_score:null, expedia_reviews:null },
-    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.40, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.45, booking_limpieza:8.20, expedia_limpieza:null },
-    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
-    hosts:{ qa_completion_pct:28 }
+  { mes:'Octubre 2024',
+    booking:{ reviews:[], computed:{ overall:4.30, staff:4.65, cleanliness:4.45 }, review_count:515 },
+    airbnb:{ reviews:[], computed:{ overall:4.55, cleanliness:4.45, comunicacion:4.80, llegada:4.80 }, review_count:620 },
+    expedia:{ reviews:[], computed:{ overall:null, staff:null, cleanliness:null }, review_count:0 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:28, limpiezas:null, hallazgos:null }
   },
-  {
-    mes: 'Noviembre 2024',
-    csat:{ airbnb_score:4.50, airbnb_reviews:580, booking_score:8.20, booking_reviews:490, expedia_score:null, expedia_reviews:null },
-    staff:{ airbnb_comunicacion:4.50, airbnb_checkin:4.50, booking_staff:8.00, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.55, booking_limpieza:8.20, expedia_limpieza:null },
-    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
-    hosts:{ qa_completion_pct:38 }
+  { mes:'Noviembre 2024',
+    booking:{ reviews:[], computed:{ overall:4.10, staff:4.36, cleanliness:4.55 }, review_count:490 },
+    airbnb:{ reviews:[], computed:{ overall:4.40, cleanliness:4.55, comunicacion:4.50, llegada:4.50 }, review_count:580 },
+    expedia:{ reviews:[], computed:{ overall:null, staff:null, cleanliness:null }, review_count:0 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:38, limpiezas:null, hallazgos:null }
   },
-  {
-    mes: 'Diciembre 2024',
-    csat:{ airbnb_score:4.52, airbnb_reviews:560, booking_score:8.10, booking_reviews:475, expedia_score:null, expedia_reviews:null },
-    staff:{ airbnb_comunicacion:4.50, airbnb_checkin:4.50, booking_staff:8.00, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.44, booking_limpieza:8.00, expedia_limpieza:null },
-    housekeeping:{ total_limpiezas:null, hallazgos_qa_pct:null },
-    hosts:{ qa_completion_pct:34 }
+  { mes:'Diciembre 2024',
+    booking:{ reviews:[], computed:{ overall:4.05, staff:4.39, cleanliness:4.44 }, review_count:475 },
+    airbnb:{ reviews:[], computed:{ overall:4.45, cleanliness:4.44, comunicacion:4.50, llegada:4.50 }, review_count:560 },
+    expedia:{ reviews:[], computed:{ overall:null, staff:null, cleanliness:null }, review_count:0 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:34, limpiezas:null, hallazgos:null }
   },
-  {
-    mes: 'Enero 2025',
-    csat:{ airbnb_score:4.62, airbnb_reviews:697, booking_score:8.50, booking_reviews:587, expedia_score:9.0, expedia_reviews:130 },
-    staff:{ airbnb_comunicacion:4.80, airbnb_checkin:4.80, booking_staff:8.60, expedia_staff:null },
-    cleanliness:{ airbnb_limpieza:4.71, booking_limpieza:8.50, expedia_limpieza:9.0 },
-    housekeeping:{ total_limpiezas:421, hallazgos_qa_pct:15 },
-    hosts:{ qa_completion_pct:39 }
+  { mes:'Enero 2025',
+    booking:{ reviews:[], computed:{ overall:4.25, staff:4.30, cleanliness:4.25 }, review_count:587 },
+    airbnb:{ reviews:[], computed:{ overall:4.62, cleanliness:4.71, comunicacion:4.80, llegada:4.80 }, review_count:697 },
+    expedia:{ reviews:[], computed:{ overall:4.50, staff:null, cleanliness:4.50 }, review_count:130 },
+    google:{ score:null, reviews:0 },
+    hostelworld:{ score:null, reviews:0 },
+    ops:{ qa_completion:39, limpiezas:421, hallazgos:15 }
   }
 ];
 
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  DATA LAYER
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 function loadData() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (r) return JSON.parse(r);
   } catch(e) {}
-  // First load: seed
-  const data = { historico: HISTORICO, meses: SEED_MESES };
+  const data = { historico: HISTORICO, meses: SEED };
   saveData(data);
   return data;
 }
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-// ─────────────────────────────────────────
-//  CALCULATIONS
-// ─────────────────────────────────────────
-function calcCSAT(m) {
-  const c = m.csat;
+// ═══════════════════════════════════════════════
+//  CALCULATIONS (ponderado)
+// ═══════════════════════════════════════════════
+function weightedAvg(items) {
+  // items: [{score, count}] — score ya normalizado a 1–5
   let sum = 0, tot = 0;
-  if (c.airbnb_score && c.airbnb_reviews) { sum += c.airbnb_score * c.airbnb_reviews; tot += c.airbnb_reviews; }
-  if (c.booking_score && c.booking_reviews) { sum += (c.booking_score/2) * c.booking_reviews; tot += c.booking_reviews; }
-  if (c.expedia_score && c.expedia_reviews) { sum += (c.expedia_score/2) * c.expedia_reviews; tot += c.expedia_reviews; }
+  items.forEach(i => { if (i.score != null && i.count > 0) { sum += i.score * i.count; tot += i.count; } });
   return tot > 0 ? sum / tot : null;
 }
 
-function calcStaff(m) {
-  const s = m.staff;
-  const vals = [];
-  if (s.airbnb_comunicacion) vals.push(s.airbnb_comunicacion);
-  if (s.airbnb_checkin) vals.push(s.airbnb_checkin);
-  if (s.booking_staff) vals.push(s.booking_staff / 2);
-  if (s.expedia_staff) vals.push(s.expedia_staff / 2);
+function reviewsAvg(arr, field) {
+  // promedio simple de un campo en array de reseñas individuales
+  const vals = arr.map(r => parseFloat(r[field])).filter(v => !isNaN(v) && v > 0);
   return vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
 }
 
-function calcCleanliness(m) {
-  const cl = m.cleanliness;
-  // Use same review counts from csat section
-  const c = m.csat;
-  let sum = 0, tot = 0;
-  if (cl.airbnb_limpieza && c.airbnb_reviews) { sum += cl.airbnb_limpieza * c.airbnb_reviews; tot += c.airbnb_reviews; }
-  if (cl.booking_limpieza && c.booking_reviews) { sum += (cl.booking_limpieza/2) * c.booking_reviews; tot += c.booking_reviews; }
-  if (cl.expedia_limpieza && c.expedia_reviews) { sum += (cl.expedia_limpieza/2) * c.expedia_reviews; tot += c.expedia_reviews; }
-  return tot > 0 ? sum / tot : null;
+function getMonthKPIs(m) {
+  // — Booking scores (ya en 1–10, dividir entre 2)
+  let bk = m.booking;
+  let bkOverall = null, bkStaff = null, bkClean = null, bkCount = 0;
+  if (bk.reviews && bk.reviews.length > 0) {
+    const toNum = (v) => { const n = parseFloat(v); return isNaN(n)||n===0?null:n; };
+    const bkScores = bk.reviews.map(r=>toNum(r['Review score'])).filter(v=>v!=null);
+    const bkStaffV = bk.reviews.map(r=>toNum(r['Staff'])).filter(v=>v!=null);
+    const bkCleanV = bk.reviews.map(r=>toNum(r['Cleanliness'])).filter(v=>v!=null);
+    bkOverall = bkScores.length ? bkScores.reduce((a,b)=>a+b,0)/bkScores.length/2 : null;
+    bkStaff   = bkStaffV.length ? bkStaffV.reduce((a,b)=>a+b,0)/bkStaffV.length/2 : null;
+    bkClean   = bkCleanV.length ? bkCleanV.reduce((a,b)=>a+b,0)/bkCleanV.length/2 : null;
+    bkCount   = bk.reviews.length;
+  } else if (bk.computed) {
+    bkOverall = bk.computed.overall; bkStaff = bk.computed.staff; bkClean = bk.computed.cleanliness;
+    bkCount   = bk.review_count || 0;
+  }
+
+  // — Airbnb scores (1–5)
+  let ab = m.airbnb;
+  let abOverall = null, abComun = null, abLleg = null, abClean = null, abCount = 0;
+  if (ab.reviews && ab.reviews.length > 0) {
+    abOverall = reviewsAvg(ab.reviews, 'overall');
+    abComun   = reviewsAvg(ab.reviews, 'comunicacion');
+    abLleg    = reviewsAvg(ab.reviews, 'llegada');
+    abClean   = reviewsAvg(ab.reviews, 'limpieza');
+    abCount   = ab.reviews.length;
+  } else if (ab.computed) {
+    abOverall = ab.computed.overall; abComun = ab.computed.comunicacion;
+    abLleg = ab.computed.llegada; abClean = ab.computed.cleanliness;
+    abCount = ab.review_count || 0;
+  }
+
+  // — Expedia scores (1–5, ya normalizados en captura)
+  let ex = m.expedia;
+  let exOverall = null, exStaff = null, exClean = null, exCount = 0;
+  if (ex.reviews && ex.reviews.length > 0) {
+    exOverall = reviewsAvg(ex.reviews, 'overall');
+    exStaff   = reviewsAvg(ex.reviews, 'staff');
+    exClean   = reviewsAvg(ex.reviews, 'limpieza');
+    exCount   = ex.reviews.length;
+  } else if (ex.computed) {
+    exOverall = ex.computed.overall; exStaff = ex.computed.staff; exClean = ex.computed.cleanliness;
+    exCount   = ex.review_count || 0;
+  }
+
+  // — Google (overall solo, 1–5)
+  const gScore = m.google && m.google.score ? parseFloat(m.google.score) : null;
+  const gCount = m.google ? (parseInt(m.google.reviews)||0) : 0;
+
+  // — HostelWorld (1–10 → /2)
+  const hwRaw = m.hostelworld && m.hostelworld.score ? parseFloat(m.hostelworld.score) : null;
+  const hwScore = hwRaw != null ? hwRaw / 2 : null;
+  const hwCount = m.hostelworld ? (parseInt(m.hostelworld.reviews)||0) : 0;
+
+  // ── CSAT ponderado (5 fuentes)
+  const csat = weightedAvg([
+    { score: abOverall, count: abCount },
+    { score: bkOverall, count: bkCount },
+    { score: exOverall, count: exCount },
+    { score: gScore,   count: gCount },
+    { score: hwScore,  count: hwCount }
+  ]);
+
+  // ── Staff Score ponderado: Airbnb(comun+llegada promedio), Booking(staff), Expedia(staff)
+  const abStaff = (abComun!=null && abLleg!=null) ? (abComun+abLleg)/2 : (abComun||abLleg);
+  const staff = weightedAvg([
+    { score: abStaff, count: abCount },
+    { score: bkStaff, count: bkCount },
+    { score: exStaff, count: exCount }
+  ]);
+
+  // ── Cleanliness ponderado: Airbnb, Booking, Expedia
+  const cleanliness = weightedAvg([
+    { score: abClean, count: abCount },
+    { score: bkClean, count: bkCount },
+    { score: exClean, count: exCount }
+  ]);
+
+  return {
+    csat, staff, cleanliness,
+    sources: {
+      airbnb:  { overall: abOverall, staff: abStaff, cleanliness: abClean, count: abCount },
+      booking: { overall: bkOverall, staff: bkStaff, cleanliness: bkClean, count: bkCount },
+      expedia: { overall: exOverall, staff: exStaff, cleanliness: exClean, count: exCount },
+      google:  { overall: gScore, count: gCount },
+      hostelworld: { overall: hwScore, count: hwCount }
+    },
+    ops: m.ops || {}
+  };
 }
 
-function fmt(v, dec=2) { return v !== null && v !== undefined ? v.toFixed(dec) : '—'; }
-
-function semaforo(value, meta, mode='gte') {
-  if (value === null || value === undefined) return 'neutral';
-  if (mode === 'gte') return value >= meta ? 'green' : value >= meta*0.955 ? 'yellow' : 'red';
-  if (mode === 'lte') return value <= meta ? 'green' : value <= meta*1.1 ? 'yellow' : 'red';
-  return 'neutral';
-}
-
-// ─────────────────────────────────────────
-//  MONTH SELECTORS POPULATION
-// ─────────────────────────────────────────
-function populateMonthSelect(selectEl, current) {
-  selectEl.innerHTML = '';
-  YEARS.forEach(y => {
-    MONTHS_ES.forEach((m,i) => {
-      const val = `${m} ${y}`;
-      const opt = document.createElement('option');
-      opt.value = val; opt.textContent = val;
-      if (val === current) opt.selected = true;
-      selectEl.appendChild(opt);
-    });
-  });
-}
-
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  RENDER DASHBOARD
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 let appData = null;
 let currentMes = null;
 
 function render() {
   appData = loadData();
   const selector = document.getElementById('monthSelector');
-
-  // Populate selector with available months
   const available = appData.meses.map(m=>m.mes);
   selector.innerHTML = '';
   available.forEach(mes => {
-    const opt = document.createElement('option');
-    opt.value = mes; opt.textContent = mes;
-    selector.appendChild(opt);
+    const o = document.createElement('option');
+    o.value = mes; o.textContent = mes;
+    if (mes === currentMes) o.selected = true;
+    selector.appendChild(o);
   });
-  // Default to last month
-  if (!currentMes || !available.includes(currentMes)) {
-    currentMes = available[available.length - 1];
-  }
+  if (!currentMes || !available.includes(currentMes))
+    currentMes = available[available.length-1];
   selector.value = currentMes;
-
   renderDashboard();
   renderChart();
+  updateCaptureTab();
 }
 
 function renderDashboard() {
-  const mesData = appData.meses.find(m => m.mes === currentMes);
+  const md = appData.meses.find(m=>m.mes===currentMes);
   const hist = appData.historico;
-
-  if (!mesData) {
-    document.getElementById('csatBig').textContent = '—';
-    document.getElementById('csatBadge').innerHTML = '';
-    document.getElementById('csatInfo').innerHTML = '<span style="color:var(--muted);font-size:13px">Sin datos para este mes.</span>';
-    document.getElementById('hostsCards').innerHTML = '';
-    document.getElementById('hkCards').innerHTML = '';
+  if (!md) {
+    document.getElementById('csatBig').textContent='—';
+    document.getElementById('csatBadge').innerHTML='';
+    document.getElementById('csatInfo').innerHTML='';
+    document.getElementById('csatBreakdown').innerHTML='';
+    document.getElementById('hostsCards').innerHTML='';
+    document.getElementById('hkCards').innerHTML='';
     return;
   }
+  const k = getMonthKPIs(md);
+  const { csat, staff, cleanliness, sources, ops } = k;
 
-  const csat = calcCSAT(mesData);
-  const staff = calcStaff(mesData);
-  const clean = calcCleanliness(mesData);
-  const qa = mesData.hosts.qa_completion_pct;
-  const limp = mesData.housekeeping.total_limpiezas;
-  const hall = mesData.housekeeping.hallazgos_qa_pct;
-
-  // ─ CSAT Hero ─
-  const csatColor = csat === null ? 'var(--muted)' : csat >= 4.5 ? 'var(--green)' : csat >= 4.3 ? 'var(--yellow)' : 'var(--red)';
-  document.getElementById('csatBig').textContent = csat !== null ? csat.toFixed(2) : '—';
+  // CSAT Hero
+  const csatColor = csat==null?'var(--muted)':csat>=4.5?'var(--green)':csat>=4.3?'var(--yellow)':'var(--red)';
+  const csatSem = csat==null?'neutral':csat>=4.5?'green':csat>=4.3?'yellow':'red';
+  const csatLabel = csatSem==='green'?'Cumple meta ≥ 4.5':csatSem==='yellow'?'Por debajo de meta':'Bajo — requiere atención';
+  document.getElementById('csatBig').textContent = csat!=null?csat.toFixed(2):'—';
   document.getElementById('csatBig').style.color = csatColor;
-
-  const csatSem = csat === null ? 'neutral' : csat >= 4.5 ? 'green' : csat >= 4.3 ? 'yellow' : 'red';
-  const csatLabel = csatSem === 'green' ? 'Cumple meta ≥ 4.5' : csatSem === 'yellow' ? 'Por debajo de meta' : 'Bajo — requiere atención';
-  document.getElementById('csatBadge').innerHTML = badge(csatSem, csatLabel);
-
-  const csatDelta = csat !== null ? csat - hist.csat_acumulado : null;
+  document.getElementById('csatBadge').innerHTML = `<span class="badge ${csatSem}"><span class="dot ${csatSem}"></span>${csatLabel}</span>`;
+  const csatDelta = csat!=null ? csat-hist.csat_acumulado : null;
   document.getElementById('csatInfo').innerHTML = `
     <div style="font-size:12px;color:var(--muted);margin-bottom:4px">vs. Acumulado histórico (${hist.csat_acumulado.toFixed(2)})</div>
-    ${csatDelta !== null ? `<div class="delta ${csatDelta>=0?'up':'down'}">${csatDelta>=0?'▲':'▼'} ${Math.abs(csatDelta).toFixed(2)} pts</div>` : ''}
-    <div style="font-size:12px;color:var(--muted);margin-top:12px">Meta: ≥ 4.5 / 5.0</div>
+    ${csatDelta!=null?`<div class="delta ${csatDelta>=0?'up':'down'}">${csatDelta>=0?'▲':'▼'} ${Math.abs(csatDelta).toFixed(2)} pts</div>`:''}
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Meta: ≥ 4.50 / 5.00 · Ponderado por volumen de reseñas</div>
   `;
 
-  // ─ Hosts Cards ─
-  const staffDelta = staff !== null ? staff - hist.staff_score_acumulado : null;
-  const staffSem = staffDelta !== null ? (staffDelta >= 0.03 ? 'green' : staffDelta >= -0.05 ? 'yellow' : 'red') : 'neutral';
-  const qaSem = qa !== null ? (qa >= 50 ? 'green' : qa >= 40 ? 'yellow' : 'red') : 'neutral';
+  // Breakdown por OTA
+  const src = sources;
+  const rows = [
+    ['Airbnb',       src.airbnb.overall,      src.airbnb.count,       src.airbnb.staff,       src.airbnb.cleanliness],
+    ['Booking',      src.booking.overall,     src.booking.count,      src.booking.staff,      src.booking.cleanliness],
+    ['Expedia',      src.expedia.overall,     src.expedia.count,      src.expedia.staff,      src.expedia.cleanliness],
+    ['Google',       src.google.overall,      src.google.count,       null,                   null],
+    ['HostelWorld',  src.hostelworld.overall, src.hostelworld.count,  null,                   null],
+  ].filter(r=>r[2]>0||r[1]!=null);
 
-  document.getElementById('hostsCards').innerHTML = `
-    ${card('Staff Score', staff !== null ? staff.toFixed(2) : '—', `Acum. ${hist.staff_score_acumulado.toFixed(2)}`, staffSem, staffDelta, 'Meta: +0.03 sobre histórico')}
-    ${card('% Auditorías QA', qa !== null ? qa.toFixed(1)+'%' : '—', '', qaSem, null, 'Meta: > 50%')}
+  document.getElementById('csatBreakdown').innerHTML = rows.length===0 ? '' : `
+    <table>
+      <thead><tr><th>Fuente</th><th># Reseñas</th><th>CSAT</th><th>Staff</th><th>Limpieza</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${r[0]}</td>
+        <td class="num">${r[2]||'—'}</td>
+        <td class="num">${r[1]!=null?r[1].toFixed(2):'—'}</td>
+        <td class="num">${r[3]!=null?r[3].toFixed(2):'—'}</td>
+        <td class="num">${r[4]!=null?r[4].toFixed(2):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>
   `;
 
-  // ─ HK Cards ─
-  const cleanDelta = clean !== null ? clean - hist.cleanliness_acumulado : null;
-  const cleanSem = cleanDelta !== null ? (cleanDelta >= 0.03 ? 'green' : cleanDelta >= -0.05 ? 'yellow' : 'red') : 'neutral';
-  const limpSem = limp !== null ? (limp >= 400 ? 'green' : limp >= 360 ? 'yellow' : 'red') : 'neutral';
+  // Staff card
+  const staffDelta = staff!=null?staff-hist.staff_score_acumulado:null;
+  const staffSem = staffDelta!=null?(staffDelta>=0.03?'green':staffDelta>=-0.05?'yellow':'red'):'neutral';
+  const qaSem = ops.qa_completion!=null?(ops.qa_completion>=50?'green':ops.qa_completion>=40?'yellow':'red'):'neutral';
+  document.getElementById('hostsCards').innerHTML =
+    mkCard('Staff Score', staff!=null?staff.toFixed(2):'—', `Acum. ${hist.staff_score_acumulado.toFixed(2)}`, staffSem, staffDelta, 'Meta: superar histórico +0.03 pts') +
+    mkCard('% Auditorías QA', ops.qa_completion!=null?ops.qa_completion.toFixed(1)+'%':'—', '', qaSem, null, 'Meta: > 50%');
 
-  document.getElementById('hkCards').innerHTML = `
-    ${card('Cleanliness Score', clean !== null ? clean.toFixed(2) : '—', `Acum. ${hist.cleanliness_acumulado.toFixed(2)}`, cleanSem, cleanDelta, 'Meta: +0.03 sobre histórico')}
-    ${card('Total Limpiezas', limp !== null ? limp.toString() : '—', '', limpSem, null, 'Meta: ≥ 400 por mes')}
-    ${card('% Hallazgos QA HK', hall !== null ? hall.toFixed(1)+'%' : '—', '', 'neutral', null, 'Menor es mejor')}
-  `;
+  // HK cards
+  const cleanDelta = cleanliness!=null?cleanliness-hist.cleanliness_acumulado:null;
+  const cleanSem = cleanDelta!=null?(cleanDelta>=0.03?'green':cleanDelta>=-0.05?'yellow':'red'):'neutral';
+  const limpSem = ops.limpiezas!=null?(ops.limpiezas>=400?'green':ops.limpiezas>=360?'yellow':'red'):'neutral';
+  document.getElementById('hkCards').innerHTML =
+    mkCard('Cleanliness Score', cleanliness!=null?cleanliness.toFixed(2):'—', `Acum. ${hist.cleanliness_acumulado.toFixed(2)}`, cleanSem, cleanDelta, 'Meta: superar histórico +0.03 pts') +
+    mkCard('Total Limpiezas', ops.limpiezas!=null?ops.limpiezas.toString():'—', '', limpSem, null, 'Meta: ≥ 400 por mes') +
+    mkCard('% Hallazgos QA HK', ops.hallazgos!=null?ops.hallazgos.toFixed(1)+'%':'—', '', 'neutral', null, 'Menor es mejor');
 }
 
-function badge(sem, label) {
-  return `<span class="badge ${sem}"><span class="dot ${sem}"></span>${label}</span>`;
+function mkCard(label, value, sub, sem, delta, hint) {
+  const dh = delta!=null ? `<span class="delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(2)}</span>` : '';
+  return `<div class="card">
+    <div class="card-label"><span class="dot ${sem}"></span>${label}</div>
+    <div class="card-value">${value}</div>
+    <div class="card-meta">${dh}${sub?'<span style="margin-left:4px">'+sub+'</span>':''}</div>
+    <div class="card-hint">${hint}</div>
+  </div>`;
 }
 
-function card(label, value, sub, sem, delta, meta) {
-  const deltaHtml = delta !== null
-    ? `<span class="delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(2)}</span>`
-    : '';
-  return `
-    <div class="card">
-      <div class="card-label"><span class="dot ${sem}"></span>${label}</div>
-      <div class="card-value sm">${value}</div>
-      <div class="card-meta">
-        ${deltaHtml}
-        ${sub ? `<span>${sub}</span>` : ''}
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">${meta}</div>
-    </div>
-  `;
-}
-
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  CHART
-// ─────────────────────────────────────────
+// ═══════════════════════════════════════════════
 function renderChart() {
   const canvas = document.getElementById('trendChart');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-
-  // Get last 6 months
   const slice = appData.meses.slice(-6);
-  if (slice.length < 2) {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    return;
-  }
-
-  // Set canvas resolution
-  const W = canvas.offsetWidth;
-  const H = canvas.offsetHeight || 220;
-  canvas.width = W * window.devicePixelRatio;
-  canvas.height = H * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-  const labels = slice.map(m => m.mes.split(' ')[0].substring(0,3));
-  const csatSeries  = slice.map(m => calcCSAT(m));
-  const staffSeries = slice.map(m => calcStaff(m));
-  const cleanSeries = slice.map(m => calcCleanliness(m));
-
-  const PAD = { top:20, right:20, bottom:36, left:40 };
-  const gW = W - PAD.left - PAD.right;
-  const gH = H - PAD.top - PAD.bottom;
-
-  const minY = 3.8, maxY = 5.0;
-  function toX(i) { return PAD.left + (i / (slice.length-1)) * gW; }
-  function toY(v) { return PAD.top + gH - ((v - minY) / (maxY - minY)) * gH; }
-
-  // Background grid
-  ctx.strokeStyle = '#2A2F3F';
-  ctx.lineWidth = 1;
-  [3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0].forEach(v => {
-    const y = toY(v);
-    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left+gW, y); ctx.stroke();
-    ctx.fillStyle = '#7A8099'; ctx.font = '10px '+getComputedStyle(document.body).fontFamily;
-    ctx.textAlign = 'right';
-    ctx.fillText(v.toFixed(1), PAD.left - 6, y + 3.5);
+  const W = canvas.offsetWidth||800, H = 200;
+  canvas.width = W*devicePixelRatio; canvas.height = H*devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  if (slice.length<2) return;
+  const labels = slice.map(m=>m.mes.split(' ')[0].substring(0,3));
+  const series = slice.map(m=>{ const k=getMonthKPIs(m); return { csat:k.csat, staff:k.staff, clean:k.cleanliness }; });
+  const PAD={top:16,right:16,bottom:32,left:38};
+  const gW=W-PAD.left-PAD.right, gH=H-PAD.top-PAD.bottom;
+  const minY=3.8,maxY=5.0;
+  const toX=i=>PAD.left+(i/(slice.length-1))*gW;
+  const toY=v=>PAD.top+gH-((v-minY)/(maxY-minY))*gH;
+  ctx.strokeStyle='#2A2F3F'; ctx.lineWidth=1;
+  [3.8,4.0,4.2,4.4,4.6,4.8,5.0].forEach(v=>{
+    const y=toY(v);
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+gW,y); ctx.stroke();
+    ctx.fillStyle='#7A8099'; ctx.font='10px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign='right'; ctx.fillText(v.toFixed(1),PAD.left-5,y+3.5);
   });
-
-  // X labels
-  ctx.fillStyle = '#7A8099'; ctx.textAlign = 'center';
-  labels.forEach((l,i) => { ctx.fillText(l, toX(i), H - PAD.bottom + 16); });
-
-  // Lines
-  function drawLine(series, color) {
-    const pts = series.map((v,i) => v !== null ? {x: toX(i), y: toY(v)} : null).filter(Boolean);
-    if (pts.length < 2) return;
-    ctx.beginPath();
-    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-    pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.stroke();
-    // Dots
-    pts.forEach(p => {
-      ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
-      ctx.fillStyle = color; ctx.fill();
-    });
-  }
-
-  drawLine(csatSeries,  '#4F7CFF');
-  drawLine(staffSeries, '#22C97A');
-  drawLine(cleanSeries, '#F0B429');
-}
-
-// ─────────────────────────────────────────
-//  MODAL
-// ─────────────────────────────────────────
-function openModal(prefillMes) {
-  const target = prefillMes || currentMes;
-  const formMes = document.getElementById('fMes');
-  populateMonthSelect(formMes, target);
-
-  // Prefill if data exists
-  const existing = appData.meses.find(m => m.mes === target);
-  clearForm();
-  if (existing) fillForm(existing);
-
-  const delSec = document.getElementById('deleteSection');
-  delSec.style.display = existing ? 'flex' : 'none';
-
-  document.getElementById('modalBackdrop').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('modalBackdrop').classList.remove('open');
-}
-
-function clearForm() {
-  ['fAirbnbScore','fAirbnbReviews','fBookingScore','fBookingReviews',
-   'fExpediaScore','fExpediaReviews','fAirbnbComun','fAirbnbCheckin',
-   'fBookingStaff','fExpediaStaff','fAirbnbLimp','fBookingLimp',
-   'fExpediaLimp','fQaCompletion','fLimpiezas','fHallazgos'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-}
-
-function fillForm(m) {
-  const set = (id, v) => { if (v !== null && v !== undefined) document.getElementById(id).value = v; };
-  set('fAirbnbScore', m.csat.airbnb_score);
-  set('fAirbnbReviews', m.csat.airbnb_reviews);
-  set('fBookingScore', m.csat.booking_score);
-  set('fBookingReviews', m.csat.booking_reviews);
-  set('fExpediaScore', m.csat.expedia_score);
-  set('fExpediaReviews', m.csat.expedia_reviews);
-  set('fAirbnbComun', m.staff.airbnb_comunicacion);
-  set('fAirbnbCheckin', m.staff.airbnb_checkin);
-  set('fBookingStaff', m.staff.booking_staff);
-  set('fExpediaStaff', m.staff.expedia_staff);
-  set('fAirbnbLimp', m.cleanliness.airbnb_limpieza);
-  set('fBookingLimp', m.cleanliness.booking_limpieza);
-  set('fExpediaLimp', m.cleanliness.expedia_limpieza);
-  set('fQaCompletion', m.hosts.qa_completion_pct);
-  set('fLimpiezas', m.housekeeping.total_limpiezas);
-  set('fHallazgos', m.housekeeping.hallazgos_qa_pct);
-}
-
-function getNum(id) {
-  const v = parseFloat(document.getElementById(id).value);
-  return isNaN(v) ? null : v;
-}
-
-function saveMonth() {
-  const mes = document.getElementById('fMes').value;
-
-  // Validate required fields
-  const airbnbScore = getNum('fAirbnbScore');
-  const airbnbReviews = getNum('fAirbnbReviews');
-  const bookingScore = getNum('fBookingScore');
-  const bookingReviews = getNum('fBookingReviews');
-  if (!airbnbScore || !airbnbReviews || !bookingScore || !bookingReviews) {
-    alert('Por favor completa los campos obligatorios: Airbnb Score, Airbnb Reviews, Booking Score y Booking Reviews.');
-    return;
-  }
-
-  const newEntry = {
-    mes,
-    csat: {
-      airbnb_score: airbnbScore, airbnb_reviews: airbnbReviews,
-      booking_score: bookingScore, booking_reviews: bookingReviews,
-      expedia_score: getNum('fExpediaScore'), expedia_reviews: getNum('fExpediaReviews')
-    },
-    staff: {
-      airbnb_comunicacion: getNum('fAirbnbComun'),
-      airbnb_checkin: getNum('fAirbnbCheckin'),
-      booking_staff: getNum('fBookingStaff'),
-      expedia_staff: getNum('fExpediaStaff')
-    },
-    cleanliness: {
-      airbnb_limpieza: getNum('fAirbnbLimp'),
-      booking_limpieza: getNum('fBookingLimp'),
-      expedia_limpieza: getNum('fExpediaLimp')
-    },
-    hosts: { qa_completion_pct: getNum('fQaCompletion') },
-    housekeeping: { total_limpiezas: getNum('fLimpiezas'), hallazgos_qa_pct: getNum('fHallazgos') }
+  ctx.fillStyle='#7A8099'; ctx.textAlign='center';
+  labels.forEach((l,i)=>ctx.fillText(l,toX(i),H-PAD.bottom+14));
+  const drawLine=(getter,color)=>{
+    const pts=series.map((s,i)=>getter(s)!=null?{x:toX(i),y:toY(getter(s))}:null).filter(Boolean);
+    if(pts.length<2)return;
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineJoin='round';
+    pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+    pts.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fillStyle=color; ctx.fill(); });
   };
+  drawLine(s=>s.csat,'#4F7CFF');
+  drawLine(s=>s.staff,'#22C97A');
+  drawLine(s=>s.clean,'#F0B429');
+}
 
-  const data = loadData();
-  const idx = data.meses.findIndex(m => m.mes === mes);
-  if (idx >= 0) { data.meses[idx] = newEntry; }
-  else {
-    // Insert in chronological order
-    data.meses.push(newEntry);
-    data.meses.sort((a,b) => {
-      const parse = s => { const [mo,yr] = s.split(' '); return parseInt(yr)*12 + MONTHS_ES.indexOf(mo); };
-      return parse(a.mes) - parse(b.mes);
-    });
+// ═══════════════════════════════════════════════
+//  TAB: CAPTURA
+// ═══════════════════════════════════════════════
+function updateCaptureTab() {
+  const md = appData.meses.find(m=>m.mes===currentMes);
+  document.getElementById('captureMonthLabel').textContent = currentMes || '—';
+  if (!md) return;
+
+  // Airbnb rows
+  buildAirbnbRows(md.airbnb && md.airbnb.reviews ? md.airbnb.reviews : []);
+  // Expedia rows
+  buildExpediaRows(md.expedia && md.expedia.reviews ? md.expedia.reviews : []);
+  // Google
+  document.getElementById('googleScore').value = md.google&&md.google.score!=null?md.google.score:'';
+  document.getElementById('googleReviews').value = md.google&&md.google.reviews?md.google.reviews:'';
+  // HW
+  document.getElementById('hwScore').value = md.hostelworld&&md.hostelworld.score!=null?md.hostelworld.score:'';
+  document.getElementById('hwReviews').value = md.hostelworld&&md.hostelworld.reviews?md.hostelworld.reviews:'';
+  // Ops
+  document.getElementById('opsQaCompletion').value = md.ops&&md.ops.qa_completion!=null?md.ops.qa_completion:'';
+  document.getElementById('opsLimpiezas').value = md.ops&&md.ops.limpiezas!=null?md.ops.limpiezas:'';
+  document.getElementById('opsHallazgos').value = md.ops&&md.ops.hallazgos!=null?md.ops.hallazgos:'';
+  // Booking status
+  const bkCount = (md.booking&&md.booking.reviews)?md.booking.reviews.length:(md.booking&&md.booking.review_count?md.booking.review_count:0);
+  if (bkCount>0) {
+    showStatus('bookingStatus', `✓ ${bkCount} reseñas cargadas`, true);
   }
-  saveData(data);
-  currentMes = mes;
-  closeModal();
-  render();
+  refreshCapturePreview();
+}
+
+// Airbnb rows
+function buildAirbnbRows(reviews) {
+  const tbody = document.getElementById('airbnbRows');
+  tbody.innerHTML = '';
+  if (reviews.length===0) { addAirbnbRow(); return; }
+  reviews.forEach((r,i)=>addAirbnbRow(r,i));
+  refreshAirbnbCalc();
+}
+function addAirbnbRow(data,idx) {
+  const tbody=document.getElementById('airbnbRows');
+  const tr=document.createElement('tr');
+  const fields=['guest','overall','limpieza','comunicacion','llegada'];
+  const placeholders=['Nombre','5','5','5','5'];
+  tr.innerHTML=`${fields.map((f,i)=>`<td><input type="${i===0?'text':'number'}" min="1" max="5" step="0.1" placeholder="${placeholders[i]}" value="${data&&data[f]!=null?data[f]:''}" oninput="refreshAirbnbCalc();refreshCapturePreview()"></td>`).join('')}<td><button class="remove-row-btn" onclick="this.closest('tr').remove();refreshAirbnbCalc();refreshCapturePreview()">×</button></td>`;
+  tbody.appendChild(tr);
+}
+function getAirbnbRows() {
+  return Array.from(document.querySelectorAll('#airbnbRows tr')).map(tr=>{
+    const inputs=tr.querySelectorAll('input');
+    return { guest:inputs[0].value, overall:inputs[1].value||null, limpieza:inputs[2].value||null, comunicacion:inputs[3].value||null, llegada:inputs[4].value||null };
+  });
+}
+function refreshAirbnbCalc() {
+  const rows=getAirbnbRows();
+  const avg=f=>{ const vs=rows.map(r=>parseFloat(r[f])).filter(v=>!isNaN(v)&&v>0); return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null; };
+  const n=rows.filter(r=>r.overall||r.limpieza||r.comunicacion||r.llegada).length;
+  const g=avg('overall'),l=avg('limpieza'),c=avg('comunicacion'),ll=avg('llegada');
+  document.getElementById('airbnbCalc').innerHTML=n===0?'':'<span style="color:var(--text)">'+n+' reseñas — </span>'+
+    [g!=null?`General: <b>${g.toFixed(2)}</b>`:null, l!=null?`Limpieza: <b>${l.toFixed(2)}</b>`:null,
+     c!=null?`Comunicación: <b>${c.toFixed(2)}</b>`:null, ll!=null?`Llegada: <b>${ll.toFixed(2)}</b>`:null].filter(Boolean).join(' · ');
+}
+
+// Expedia rows
+function buildExpediaRows(reviews) {
+  const tbody=document.getElementById('expediaRows');
+  tbody.innerHTML='';
+  if(reviews.length===0){addExpediaRow();return;}
+  reviews.forEach((r,i)=>addExpediaRow(r,i));
+  refreshExpediaCalc();
+}
+function addExpediaRow(data) {
+  const tbody=document.getElementById('expediaRows');
+  const tr=document.createElement('tr');
+  const fields=['guest','overall','staff','limpieza'];
+  const placeholders=['Nombre','5','5','5'];
+  tr.innerHTML=`${fields.map((f,i)=>`<td><input type="${i===0?'text':'number'}" min="1" max="5" step="0.1" placeholder="${placeholders[i]}" value="${data&&data[f]!=null?data[f]:''}" oninput="refreshExpediaCalc();refreshCapturePreview()"></td>`).join('')}<td><button class="remove-row-btn" onclick="this.closest('tr').remove();refreshExpediaCalc();refreshCapturePreview()">×</button></td>`;
+  tbody.appendChild(tr);
+}
+function getExpediaRows() {
+  return Array.from(document.querySelectorAll('#expediaRows tr')).map(tr=>{
+    const inputs=tr.querySelectorAll('input');
+    return { guest:inputs[0].value, overall:inputs[1].value||null, staff:inputs[2].value||null, limpieza:inputs[3].value||null };
+  });
+}
+function refreshExpediaCalc() {
+  const rows=getExpediaRows();
+  const avg=f=>{ const vs=rows.map(r=>parseFloat(r[f])).filter(v=>!isNaN(v)&&v>0); return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null; };
+  const n=rows.filter(r=>r.overall||r.staff||r.limpieza).length;
+  const g=avg('overall'),s=avg('staff'),l=avg('limpieza');
+  document.getElementById('expediaCalc').innerHTML=n===0?'':'<span style="color:var(--text)">'+n+' reseñas — </span>'+
+    [g!=null?`General: <b>${g.toFixed(2)}</b>`:null, s!=null?`Staff: <b>${s.toFixed(2)}</b>`:null, l!=null?`Limpieza: <b>${l.toFixed(2)}</b>`:null].filter(Boolean).join(' · ');
+}
+
+function refreshCapturePreview() {
+  // Build a temporary month object from current form state
+  const abRows=getAirbnbRows().filter(r=>r.overall||r.limpieza||r.comunicacion||r.llegada);
+  const exRows=getExpediaRows().filter(r=>r.overall||r.staff||r.limpieza);
+  const gScore=parseFloat(document.getElementById('googleScore').value)||null;
+  const gRev=parseInt(document.getElementById('googleReviews').value)||0;
+  const hwRaw=parseFloat(document.getElementById('hwScore').value)||null;
+  const hwRev=parseInt(document.getElementById('hwReviews').value)||0;
+  const md=appData.meses.find(m=>m.mes===currentMes);
+  if(!md)return;
+  const tmp={
+    booking: md.booking,
+    airbnb:{ reviews: abRows },
+    expedia:{ reviews: exRows },
+    google:{ score: gScore, reviews: gRev },
+    hostelworld:{ score: hwRaw, reviews: hwRev },
+    ops:{ qa_completion: parseFloat(document.getElementById('opsQaCompletion').value)||null,
+          limpiezas: parseInt(document.getElementById('opsLimpiezas').value)||null,
+          hallazgos: parseFloat(document.getElementById('opsHallazgos').value)||null }
+  };
+  const k=getMonthKPIs(tmp);
+  const hist=appData.historico;
+  const fmt=v=>v!=null?v.toFixed(2):'—';
+  const delta=(v,base)=>{ if(v==null)return ''; const d=v-base; return `<span class="delta ${d>=0?'up':'down'}" style="font-size:11px">${d>=0?'▲':'▼'}${Math.abs(d).toFixed(2)}</span>`; };
+  document.getElementById('captureSummary').innerHTML=`
+    <div class="capture-summary-title">Vista previa de KPIs (se actualizan en tiempo real)</div>
+    <div class="summary-row"><span class="summary-label">CSAT General</span><span class="summary-val">${fmt(k.csat)} ${delta(k.csat,hist.csat_acumulado)}</span></div>
+    <div class="summary-row"><span class="summary-label">Staff Score</span><span class="summary-val">${fmt(k.staff)} ${delta(k.staff,hist.staff_score_acumulado)}</span></div>
+    <div class="summary-row"><span class="summary-label">Cleanliness Score</span><span class="summary-val">${fmt(k.cleanliness)} ${delta(k.cleanliness,hist.cleanliness_acumulado)}</span></div>
+    <div class="summary-row"><span class="summary-label">% Auditorías QA</span><span class="summary-val">${k.ops.qa_completion!=null?k.ops.qa_completion.toFixed(1)+'%':'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">Total Limpiezas</span><span class="summary-val">${k.ops.limpiezas!=null?k.ops.limpiezas:'—'}</span></div>
+    <div class="summary-row"><span class="summary-label">% Hallazgos HK</span><span class="summary-val">${k.ops.hallazgos!=null?k.ops.hallazgos.toFixed(1)+'%':'—'}</span></div>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+//  CSV PROCESSORS
+// ═══════════════════════════════════════════════
+function processBookingCSV(input) {
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const text=e.target.result;
+      const lines=text.split('\n').filter(l=>l.trim());
+      const headers=parseCSVLine(lines[0]);
+      const reviews=[];
+      const targetMes=currentMes;
+      const [tMon,tYear]=targetMes.split(' ');
+      const tMonIdx=MONTHS_ES.indexOf(tMon);
+      for(let i=1;i<lines.length;i++){
+        const vals=parseCSVLine(lines[i]);
+        if(vals.length<2)continue;
+        const row={};
+        headers.forEach((h,j)=>row[h.trim()]=vals[j]||'');
+        // Filter by month
+        const dateStr=row['Review date']||'';
+        if(dateStr){
+          const d=new Date(dateStr);
+          if(!isNaN(d)&&(d.getMonth()!==tMonIdx||d.getFullYear()!==parseInt(tYear)))continue;
+        }
+        reviews.push(row);
+      }
+      if(reviews.length===0){ showStatus('bookingStatus',`No se encontraron reseñas para ${currentMes}. Verifica el período del archivo.`,false); return; }
+      // Save to current month
+      const data=loadData();
+      const idx=data.meses.findIndex(m=>m.mes===currentMes);
+      if(idx>=0){
+        data.meses[idx].booking={ reviews, review_count: reviews.length, computed: null };
+        saveData(data); appData=data;
+      }
+      showStatus('bookingStatus',`✓ ${reviews.length} reseñas de Booking cargadas para ${currentMes}`,true);
+      refreshCapturePreview();
+      renderDashboard();
+    } catch(err){ showStatus('bookingStatus','Error al procesar el CSV: '+err.message,false); }
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+function processGoogleCSV(input) {
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const text=e.target.result;
+      const lines=text.split('\n').filter(l=>l.trim());
+      if(lines.length<2){showStatus('googleStatus','Archivo vacío o sin reseñas.',false);return;}
+      const headers=parseCSVLine(lines[0]);
+      // Try to find rating and date columns
+      const ratingCol=headers.findIndex(h=>/rating|star|score|puntuaci/i.test(h));
+      const dateCol=headers.findIndex(h=>/date|fecha|time/i.test(h));
+      if(ratingCol<0){showStatus('googleStatus','No se encontró columna de calificación en el CSV.',false);return;}
+      const targetMes=currentMes;
+      const [tMon,tYear]=targetMes.split(' ');
+      const tMonIdx=MONTHS_ES.indexOf(tMon);
+      let sum=0,count=0;
+      for(let i=1;i<lines.length;i++){
+        const vals=parseCSVLine(lines[i]);
+        const rating=parseFloat(vals[ratingCol]);
+        if(isNaN(rating))continue;
+        if(dateCol>=0&&vals[dateCol]){
+          const d=new Date(vals[dateCol]);
+          if(!isNaN(d)&&(d.getMonth()!==tMonIdx||d.getFullYear()!==parseInt(tYear)))continue;
+        }
+        sum+=rating; count++;
+      }
+      if(count===0){showStatus('googleStatus',`No hay reseñas de Google para ${currentMes}.`,false);return;}
+      const avg=sum/count;
+      document.getElementById('googleScore').value=avg.toFixed(2);
+      document.getElementById('googleReviews').value=count;
+      showStatus('googleStatus',`✓ ${count} reseñas cargadas. Promedio: ${avg.toFixed(2)}`,true);
+      refreshCapturePreview();
+    } catch(err){showStatus('googleStatus','Error: '+err.message,false);}
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+function parseCSVLine(line) {
+  const result=[]; let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+    else if(c===','&&!inQ){result.push(cur);cur='';}
+    else cur+=c;
+  }
+  result.push(cur);
+  return result.map(s=>s.trim());
+}
+
+// ═══════════════════════════════════════════════
+//  SAVE ALL CAPTURE
+// ═══════════════════════════════════════════════
+function saveAllCapture() {
+  const data=loadData();
+  const idx=data.meses.findIndex(m=>m.mes===currentMes);
+  if(idx<0){showToast('No se encontró el mes activo','err');return;}
+
+  const abRows=getAirbnbRows().filter(r=>r.overall||r.limpieza||r.comunicacion||r.llegada);
+  const exRows=getExpediaRows().filter(r=>r.overall||r.staff||r.limpieza);
+
+  data.meses[idx].airbnb={ reviews: abRows, computed: null, review_count: abRows.length };
+  data.meses[idx].expedia={ reviews: exRows, computed: null, review_count: exRows.length };
+  data.meses[idx].google={
+    score: parseFloat(document.getElementById('googleScore').value)||null,
+    reviews: parseInt(document.getElementById('googleReviews').value)||0
+  };
+  data.meses[idx].hostelworld={
+    score: parseFloat(document.getElementById('hwScore').value)||null,
+    reviews: parseInt(document.getElementById('hwReviews').value)||0
+  };
+  data.meses[idx].ops={
+    qa_completion: parseFloat(document.getElementById('opsQaCompletion').value)||null,
+    limpiezas: parseInt(document.getElementById('opsLimpiezas').value)||null,
+    hallazgos: parseFloat(document.getElementById('opsHallazgos').value)||null
+  };
+  saveData(data); appData=data;
+  renderDashboard(); renderChart();
   showToast('Datos guardados correctamente');
 }
 
-function deleteCurrentMonth() {
-  const mes = document.getElementById('fMes').value;
-  if (!confirm(`¿Eliminar los datos de ${mes}? Esta acción no se puede deshacer.`)) return;
-  const data = loadData();
-  data.meses = data.meses.filter(m => m.mes !== mes);
-  saveData(data);
-  currentMes = null;
-  closeModal();
-  render();
+// ═══════════════════════════════════════════════
+//  MONTH MANAGEMENT
+// ═══════════════════════════════════════════════
+function openNewMonthModal() {
+  const sel=document.getElementById('newMonthSelect');
+  sel.innerHTML='';
+  const existing=new Set((appData.meses||[]).map(m=>m.mes));
+  YEARS.forEach(y=>MONTHS_ES.forEach(m=>{
+    const v=`${m} ${y}`;
+    if(!existing.has(v)){
+      const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+    }
+  }));
+  document.getElementById('newMonthModal').classList.add('open');
+}
+function closeNewMonthModal(){document.getElementById('newMonthModal').classList.remove('open')}
+function createNewMonth(){
+  const mes=document.getElementById('newMonthSelect').value; if(!mes)return;
+  const data=loadData();
+  const blank={
+    mes, booking:{reviews:[],review_count:0,computed:null},
+    airbnb:{reviews:[],computed:null,review_count:0},
+    expedia:{reviews:[],computed:null,review_count:0},
+    google:{score:null,reviews:0}, hostelworld:{score:null,reviews:0},
+    ops:{qa_completion:null,limpiezas:null,hallazgos:null}
+  };
+  data.meses.push(blank);
+  data.meses.sort((a,b)=>{
+    const p=s=>{const[mo,yr]=s.split(' ');return parseInt(yr)*12+MONTHS_ES.indexOf(mo);};
+    return p(a.mes)-p(b.mes);
+  });
+  saveData(data); appData=data;
+  currentMes=mes; closeNewMonthModal(); render();
+  switchTab('capture',document.querySelectorAll('.tab-btn')[1]);
+  showToast(`Mes ${mes} creado`);
+}
+
+function confirmDeleteMonth() {
+  document.getElementById('deleteModalMsg').textContent=`¿Eliminar todos los datos de ${currentMes}? Esta acción no se puede deshacer.`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal(){document.getElementById('deleteModal').classList.remove('open')}
+function executeDeleteMonth(){
+  const data=loadData();
+  data.meses=data.meses.filter(m=>m.mes!==currentMes);
+  saveData(data); appData=data;
+  currentMes=null; closeDeleteModal(); render();
   showToast('Mes eliminado');
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = '✓ ' + msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+// ═══════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='capture')updateCaptureTab();
+  if(name==='dashboard'){renderDashboard();setTimeout(renderChart,50);}
 }
 
-// ─────────────────────────────────────────
-//  EVENTS
-// ─────────────────────────────────────────
-document.getElementById('monthSelector').addEventListener('change', e => {
-  currentMes = e.target.value;
-  renderDashboard();
+function showStatus(id, msg, ok) {
+  const el=document.getElementById(id);
+  el.textContent=msg; el.className='upload-status '+(ok?'ok':'err');
+}
+function dragOver(e,id){e.preventDefault();document.getElementById(id).classList.add('dragover')}
+function dragLeave(id){document.getElementById(id).classList.remove('dragover')}
+function dropFile(e,type){
+  e.preventDefault();
+  const file=e.dataTransfer.files[0]; if(!file)return;
+  if(type==='booking'){
+    const input=document.getElementById('bookingFile');
+    const dt=new DataTransfer(); dt.items.add(file); input.files=dt.files;
+    processBookingCSV(input);
+  } else {
+    const input=document.getElementById('googleFile');
+    const dt=new DataTransfer(); dt.items.add(file); input.files=dt.files;
+    processGoogleCSV(input);
+  }
+  document.getElementById(type==='booking'?'bookingZone':'googleZone').classList.remove('dragover');
+}
+
+let toastTimer=null;
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=(type==='ok'?'✓ ':'')+msg;
+  t.className='show'+(type==='err'?' err':'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.className='',3000);
+}
+
+// ═══════════════════════════════════════════════
+//  EVENTS & INIT
+// ═══════════════════════════════════════════════
+document.getElementById('monthSelector').addEventListener('change',e=>{
+  currentMes=e.target.value; renderDashboard();
+  const activeTab=document.querySelector('.tab-panel.active');
+  if(activeTab&&activeTab.id==='tab-capture')updateCaptureTab();
 });
+document.getElementById('newMonthModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeNewMonthModal()});
+document.getElementById('deleteModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDeleteModal()});
+window.addEventListener('resize',()=>{renderChart()});
 
-document.getElementById('modalBackdrop').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
+// Live preview on manual google/hw input
+['googleScore','googleReviews','hwScore','hwReviews','opsQaCompletion','opsLimpiezas','opsHallazgos']
+  .forEach(id=>document.getElementById(id).addEventListener('input',refreshCapturePreview));
 
-window.addEventListener('resize', () => { renderChart(); });
-
-// ─────────────────────────────────────────
-//  INIT
-// ─────────────────────────────────────────
 render();
 </script>
 </body>
