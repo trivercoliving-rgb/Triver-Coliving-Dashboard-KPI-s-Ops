@@ -260,11 +260,11 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           <div class="field-grid cols2">
             <div class="field-wrap">
               <label>Score acumulado (1–10)</label>
-              <input type="number" id="bkAcumScore" min="1" max="10" step="0.01" placeholder="8.3" oninput="refreshPreview()">
+              <input type="number" id="bkAcumScore" min="1" max="10" step="0.01" placeholder="Se calcula al cargar el CSV" oninput="refreshPreview()" readonly title="Se calcula automáticamente desde el CSV de Booking cargado arriba">
             </div>
             <div class="field-wrap">
               <label># Total reseñas acumuladas</label>
-              <input type="number" id="bkAcumReviews" min="0" placeholder="733" oninput="refreshPreview()">
+              <input type="number" id="bkAcumReviews" min="0" placeholder="Se calcula al cargar el CSV" oninput="refreshPreview()" readonly title="Se calcula automáticamente desde el CSV de Booking cargado arriba">
             </div>
           </div>
         </div>
@@ -1064,19 +1064,36 @@ function processBookingCSV(input){
       const headers=parseCSV(lines[0]);
       const [tMon,tYear]=currentMes.split(' ');
       const tMonIdx=MONTHS_ES.indexOf(tMon);
-      const reviews=[];
+      const reviews=[];      // reseñas del mes en captura (para KPIs del mes)
+      const allValid=[];     // TODAS las reseñas con fecha válida en el archivo (para el acumulado histórico real)
+      let skippedNoDate=0;
       for(let i=1;i<lines.length;i++){
         const vals=parseCSV(lines[i]);if(vals.length<2)continue;
         const row={};headers.forEach((h,j)=>row[h.trim()]=vals[j]||'');
         const d=new Date(row['Review date']||'');
-        if(!isNaN(d)&&(d.getMonth()!==tMonIdx||d.getFullYear()!==parseInt(tYear)))continue;
+        if(isNaN(d)){ skippedNoDate++; continue; } // sin fecha válida: no cuenta para ningún mes ni para el acumulado
+        allValid.push(row);
+        if(d.getMonth()!==tMonIdx||d.getFullYear()!==parseInt(tYear))continue;
         reviews.push(row);
       }
       if(reviews.length===0){showStatus('bookingStatus',`Sin reseñas para ${currentMes} en este archivo.`,false);return;}
       const data=loadData();
       const idx=data.meses.findIndex(m=>m.mes===currentMes);
-      if(idx>=0){data.meses[idx].booking.reviews=reviews;data.meses[idx].booking.rc=reviews.length;saveData(data);appData=data;}
-      showStatus('bookingStatus',`✓ ${reviews.length} reseñas de Booking cargadas`,true);
+      if(idx>=0){
+        data.meses[idx].booking.reviews=reviews;
+        data.meses[idx].booking.rc=reviews.length;
+        // Acumulado histórico REAL: se recalcula desde el CSV completo cada vez que se carga un archivo nuevo,
+        // en vez de depender de un campo manual que puede quedar desincronizado.
+        const toN=v=>{const x=parseFloat(v);return isNaN(x)||x===0?null:x;};
+        const allScores=allValid.map(r=>toN(r['Review score'])).filter(v=>v!=null);
+        const acumScore=allScores.length?allScores.reduce((a,b)=>a+b,0)/allScores.length:null;
+        data.meses[idx].booking.acum={ score:acumScore, reviews:allValid.length };
+        saveData(data);appData=data;
+        setVal('bkAcumScore', acumScore!=null?acumScore.toFixed(2):'');
+        setVal('bkAcumReviews', allValid.length);
+      }
+      const skippedMsg=skippedNoDate>0?` (${skippedNoDate} filas sin fecha válida ignoradas)`:'';
+      showStatus('bookingStatus',`✓ ${reviews.length} reseñas de Booking cargadas para ${currentMes} · Acumulado total en archivo: ${allValid.length}${skippedMsg}`,true);
       refreshPreview();renderDashboard();
     }catch(err){showStatus('bookingStatus','Error: '+err.message,false);}
   };
