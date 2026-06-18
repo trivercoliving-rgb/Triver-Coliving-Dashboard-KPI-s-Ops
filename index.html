@@ -161,6 +161,30 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 #toast.show{opacity:1}
 #toast.err{background:var(--red);color:#fff}
 
+/* YTD SCORE ANALYSIS */
+.ytd-combined{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin-bottom:10px}
+.ytd-donut-wrap{position:relative;flex-shrink:0}
+.ytd-donut-wrap canvas{display:block}
+.ytd-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.ytd-donut-total{font-size:20px;font-weight:800;line-height:1.1}
+.ytd-donut-sublabel{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ytd-combined-info{flex:1;min-width:180px}
+.ytd-combined-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.ytd-cleg-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.ytd-cleg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.ytd-cleg-label{color:var(--muted);flex:1}
+.ytd-cleg-count{font-weight:700}
+.ytd-cleg-pct{font-size:11px;color:var(--muted);min-width:32px;text-align:right}
+.ytd-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(185px,1fr))}
+.ytd-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.ytd-card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center;line-height:1.4}
+.ytd-legend{display:flex;flex-direction:column;gap:5px;width:100%}
+.ytd-legend-item{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.ytd-legend-left{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.ytd-legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.ytd-legend-pct{font-weight:700}
+.ytd-no-data{font-size:12px;color:var(--muted);padding:16px 0}
+
 /* RESPONSIVE */
 @media(max-width:700px){
   header,main{padding-left:14px;padding-right:14px}
@@ -222,6 +246,23 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     </div>
     <canvas id="trendChart"></canvas>
   </div>
+
+  <div class="section-label">YTD Score Analysis — Clasificación de Reseñas</div>
+  <div class="ytd-combined">
+    <div class="ytd-donut-wrap" style="width:150px;height:150px">
+      <canvas id="ytdCombinedCanvas" width="150" height="150"></canvas>
+      <div class="ytd-donut-center">
+        <div class="ytd-donut-total" id="ytdCombinedTotal">—</div>
+        <div class="ytd-donut-sublabel">reseñas</div>
+      </div>
+    </div>
+    <div class="ytd-combined-info">
+      <div class="ytd-combined-title">Todas las fuentes — Acumulado YTD</div>
+      <div id="ytdCombinedLegend"></div>
+    </div>
+  </div>
+  <div class="ytd-grid" id="ytdGrid"></div>
+
 </main>
 </div>
 
@@ -290,10 +331,10 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           </div>
         </div>
         <hr class="src-divider">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Limpieza · Comunicación · Llegada — ingresa reseña por reseña (1–5):</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">General · Limpieza · Comunicación · Llegada — ingresa reseña por reseña (1–5):</div>
         <div style="overflow-x:auto">
           <table class="review-entry-table">
-            <thead><tr><th>#</th><th>Limpieza</th><th>Comunicación</th><th>Llegada</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>General</th><th>Limpieza</th><th>Comunicación</th><th>Llegada</th><th></th></tr></thead>
             <tbody id="airbnbRows"></tbody>
           </table>
         </div>
@@ -373,6 +414,16 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           </div>
         </div>
         <hr class="src-divider">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Opcional: ingresa calificaciones individuales para clasificación YTD (1–5):</div>
+        <div style="overflow-x:auto">
+          <table class="review-entry-table">
+            <thead><tr><th>#</th><th>Calificación (1–5)</th><th></th></tr></thead>
+            <tbody id="googleRows"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addRow('google')">+ Agregar reseña</button>
+        <div class="calc-result" id="googleCalc"></div>
+        <hr class="src-divider">
         <div class="acum-box">
           <div class="acum-title">Acumulado histórico (score publicado en Google)</div>
           <div class="field-grid cols2">
@@ -407,6 +458,16 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
             <input type="number" id="hwReviews" min="0" placeholder="5" oninput="refreshPreview()">
           </div>
         </div>
+        <hr class="src-divider">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Ingresa calificaciones individuales para clasificación YTD (1–10):</div>
+        <div style="overflow-x:auto">
+          <table class="review-entry-table">
+            <thead><tr><th>#</th><th>Calificación (1–10)</th><th></th></tr></thead>
+            <tbody id="hwRows"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addRow('hw')">+ Agregar reseña</button>
+        <div class="calc-result" id="hwCalc"></div>
         <hr class="src-divider">
         <div class="acum-box">
           <div class="acum-title">Acumulado histórico (score publicado en HostelWorld)</div>
@@ -786,6 +847,191 @@ function renderDashboard(){
   document.getElementById('mantCards').innerHTML=
     mkCard('Tiempo Prom. Ticket',mant.tiempo!=null?mant.tiempo.toFixed(1)+' h':'—','Fuente: Whistle',tSem,null,'Meta: ≤ 24 h · Arturo Cruz')+
     mkCard('% Tickets en Tiempo',mant.cumplimiento!=null?mant.cumplimiento.toFixed(1)+'%':'—','',cSem,null,'Meta: ≥ 90%');
+
+  renderYTD();
+}
+
+// ═══════════════════════════════════════════════
+//  YTD CLASSIFICATION ENGINE
+// ═══════════════════════════════════════════════
+// Umbrales por escala:
+//   Escala 1-5  (Airbnb, Expedia, Google): High=5 | Medium=4 | Low=1-3
+//   Escala 1-10 (Booking, HostelWorld):    High=9-10 | Medium=7-8 | Low=1-6
+const YTD_COLORS = { high:'#2D4A8A', medium:'#C96A1A', low:'#5A6070' };
+const YTD_LABELS = { high:'High (5) — (9/10)', medium:'Medium (4) — (7/8)', low:'Low (1–3) — (1–6)' };
+
+function classify5(v){
+  const s=parseFloat(v); if(isNaN(s)||s<=0) return null;
+  if(s===5||s>=4.5) return 'high';    // 5/5 exacto (o redondeado a 5)
+  if(s>=4&&s<4.5)   return 'medium';  // 4/5
+  if(s>=1&&s<4)     return 'low';     // 1-3/5
+  return null;
+}
+function classify10(v){
+  const s=parseFloat(v); if(isNaN(s)||s<=0) return null;
+  if(s>=9)       return 'high';   // 9-10
+  if(s>=7&&s<9)  return 'medium'; // 7-8
+  if(s>=1&&s<7)  return 'low';    // 1-6
+  return null;
+}
+
+function getYTDCounts(mesData){
+  const empty=()=>({high:0,medium:0,low:0,total:0});
+  const add=(obj,cls)=>{ if(cls){obj[cls]++;obj.total++;} };
+  const bk=empty(),ab=empty(),ex=empty(),go=empty(),hw=empty();
+
+  // Booking — desde CSV: campo 'Review score' escala 1-10
+  ((mesData.booking&&mesData.booking.reviews)||[]).forEach(r=>{
+    add(bk, classify10(r['Review score']));
+  });
+
+  // Airbnb — desde rows.general (1-5, campo nuevo)
+  ((mesData.airbnb&&mesData.airbnb.rows)||[]).forEach(r=>{
+    add(ab, classify5(r.general));
+  });
+
+  // Expedia — desde rows.overall (1-5)
+  ((mesData.expedia&&mesData.expedia.rows)||[]).forEach(r=>{
+    add(ex, classify5(r.overall));
+  });
+
+  // Google — desde rows.score (1-5, manual o CSV)
+  ((mesData.google&&mesData.google.rows)||[]).forEach(r=>{
+    add(go, classify5(r.score));
+  });
+
+  // HostelWorld — desde rows.score (1-10)
+  ((mesData.hw&&mesData.hw.rows)||[]).forEach(r=>{
+    add(hw, classify10(r.score));
+  });
+
+  return {booking:bk, airbnb:ab, expedia:ex, google:go, hw:hw};
+}
+
+function getYTDAccum(){
+  // Suma todos los meses hasta currentMes inclusive
+  const [tMon,tYear]=currentMes.split(' ');
+  const tOrd=parseInt(tYear)*12+MONTHS_ES.indexOf(tMon);
+  const acc={
+    booking:{high:0,medium:0,low:0,total:0},
+    airbnb:{high:0,medium:0,low:0,total:0},
+    expedia:{high:0,medium:0,low:0,total:0},
+    google:{high:0,medium:0,low:0,total:0},
+    hw:{high:0,medium:0,low:0,total:0}
+  };
+  appData.meses.forEach(m=>{
+    const [mMon,mYr]=m.mes.split(' ');
+    const mOrd=parseInt(mYr)*12+MONTHS_ES.indexOf(mMon);
+    if(mOrd>tOrd) return;
+    const c=getYTDCounts(m);
+    ['booking','airbnb','expedia','google','hw'].forEach(src=>{
+      ['high','medium','low','total'].forEach(k=>acc[src][k]+=c[src][k]);
+    });
+  });
+  return acc;
+}
+
+function combineYTD(counts){
+  const tot={high:0,medium:0,low:0,total:0};
+  Object.values(counts).forEach(c=>['high','medium','low','total'].forEach(k=>tot[k]+=c[k]));
+  return tot;
+}
+
+function drawDonut(canvas, high, medium, low, size){
+  if(!canvas) return;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=size*dpr; canvas.height=size*dpr;
+  canvas.style.width=size+'px'; canvas.style.height=size+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const cx=size/2, cy=size/2, R=size/2-5, r=R*0.54;
+  const total=high+medium+low;
+  ctx.clearRect(0,0,size,size);
+  if(total===0){
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+    ctx.lineWidth=R-r; ctx.strokeStyle='#2A2F3F'; ctx.stroke();
+    return;
+  }
+  const slices=[
+    {v:high,  c:YTD_COLORS.high},
+    {v:medium,c:YTD_COLORS.medium},
+    {v:low,   c:YTD_COLORS.low}
+  ].filter(s=>s.v>0);
+  const gap=slices.length>1?0.03:0;
+  let start=-Math.PI/2;
+  slices.forEach(s=>{
+    const sweep=(s.v/total)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(start+gap)*R, cy+Math.sin(start+gap)*R);
+    ctx.arc(cx,cy,R,start+gap,start+sweep-gap);
+    ctx.arc(cx,cy,r,start+sweep-gap,start+gap,true);
+    ctx.closePath();
+    ctx.fillStyle=s.c; ctx.fill();
+    start+=sweep;
+  });
+}
+
+function renderYTD(){
+  const md=appData.meses.find(m=>m.mes===currentMes);
+  const grid=document.getElementById('ytdGrid');
+  const legend=document.getElementById('ytdCombinedLegend');
+  const totalEl=document.getElementById('ytdCombinedTotal');
+  if(!md||!grid){return;}
+
+  const ytd=getYTDAccum();
+  const combined=combineYTD(ytd);
+  const pct=(v,t)=>t>0?Math.round(v/t*100):0;
+
+  // Combined donut
+  totalEl.textContent=combined.total||'0';
+  const cc=document.getElementById('ytdCombinedCanvas');
+  drawDonut(cc, combined.high, combined.medium, combined.low, 150);
+
+  // Combined legend
+  legend.innerHTML=['high','medium','low'].map(k=>`
+    <div class="ytd-cleg-row">
+      <div class="ytd-cleg-dot" style="background:${YTD_COLORS[k]}"></div>
+      <span class="ytd-cleg-label">${YTD_LABELS[k]}</span>
+      <span class="ytd-cleg-count">${combined[k]}</span>
+      <span class="ytd-cleg-pct">${combined.total>0?pct(combined[k],combined.total)+'%':'—'}</span>
+    </div>`).join('');
+
+  // Per-source cards
+  const sources=[
+    {key:'booking', label:'Booking.com',  hint:'escala 1–10'},
+    {key:'airbnb',  label:'Airbnb',       hint:'escala 1–5'},
+    {key:'expedia', label:'Expedia',      hint:'escala 1–5'},
+    {key:'google',  label:'Google',       hint:'escala 1–5'},
+    {key:'hw',      label:'HostelWorld',  hint:'escala 1–10'}
+  ];
+  grid.innerHTML='';
+  sources.forEach(src=>{
+    const c=ytd[src.key];
+    const cid='ytdDnt_'+src.key;
+    const card=document.createElement('div');
+    card.className='ytd-card';
+    card.innerHTML=`
+      <div class="ytd-card-title">${src.label}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;color:var(--muted)">${src.hint}</span></div>
+      <div class="ytd-donut-wrap" style="width:110px;height:110px">
+        <canvas id="${cid}" width="110" height="110"></canvas>
+        <div class="ytd-donut-center">
+          <div class="ytd-donut-total" style="font-size:16px">${c.total}</div>
+          <div class="ytd-donut-sublabel">reseñas</div>
+        </div>
+      </div>
+      <div class="ytd-legend">
+        ${['high','medium','low'].map(k=>`
+          <div class="ytd-legend-item">
+            <div class="ytd-legend-left">
+              <div class="ytd-legend-dot" style="background:${YTD_COLORS[k]}"></div>
+              <span>${k==='high'?'High':k==='medium'?'Med':'Low'}</span>
+            </div>
+            <span class="ytd-legend-pct" style="color:${YTD_COLORS[k]}">${c.total>0?pct(c[k],c.total)+'%':'—'}</span>
+          </div>`).join('')}
+      </div>`;
+    grid.appendChild(card);
+    requestAnimationFrame(()=>drawDonut(document.getElementById(cid), c.high, c.medium, c.low, 110));
+  });
 }
 
 function mkCard(label,value,sub,sem,delta,hint){
@@ -862,12 +1108,14 @@ function updateCaptureTab(){
   setVal('googleReviews', md.google&&md.google.reviews?md.google.reviews:'');
   setVal('gAcumScore', md.google&&md.google.acum&&md.google.acum.score!=null?md.google.acum.score:'');
   setVal('gAcumReviews', md.google&&md.google.acum&&md.google.acum.reviews?md.google.acum.reviews:'');
+  buildRows('google', md.google&&md.google.rows||[]);
 
   // HW
   setVal('hwScore', md.hw&&md.hw.score!=null?md.hw.score:'');
   setVal('hwReviews', md.hw&&md.hw.reviews?md.hw.reviews:'');
   setVal('hwAcumScore', md.hw&&md.hw.acum&&md.hw.acum.score!=null?md.hw.acum.score:'');
   setVal('hwAcumReviews', md.hw&&md.hw.acum&&md.hw.acum.reviews?md.hw.acum.reviews:'');
+  buildRows('hw', md.hw&&md.hw.rows||[]);
 
   // Hosts
   setVal('responseTime', md.hosts&&md.hosts.response_time!=null?md.hosts.response_time:'');
@@ -890,23 +1138,28 @@ function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v;}
 
 // ── ROW BUILDERS ──
 const ROW_CONFIGS={
-  airbnb:{ fields:['limpieza','comunicacion','llegada'], labels:['Limpieza','Comunicación','Llegada'] },
-  expedia:{ fields:['overall','staff','limpieza'], labels:['General (1–5)','Staff (1–5)','Limpieza (1–5)'] }
+  airbnb:{ fields:['general','limpieza','comunicacion','llegada'], labels:['General','Limpieza','Comunicación','Llegada'], max:5 },
+  expedia:{ fields:['overall','staff','limpieza'], labels:['General (1–5)','Staff (1–5)','Limpieza (1–5)'], max:5 },
+  google:{ fields:['score'], labels:['Calificación'], max:5 },
+  hw:{ fields:['score'], labels:['Calificación'], max:10 }
 };
 function buildRows(type, rows){
   const tbody=document.getElementById(type+'Rows');
+  if(!tbody)return;
   tbody.innerHTML='';
-  if(rows.length===0){addRow(type);return;}
+  const startBlank=(type==='airbnb'||type==='expedia'); // google/hw start empty until user adds
+  if(rows.length===0){if(startBlank)addRow(type);return;}
   rows.forEach(r=>addRow(type,r));
   refreshRowCalc(type);
 }
 function addRow(type, data){
   const cfg=ROW_CONFIGS[type];
   const tbody=document.getElementById(type+'Rows');
+  if(!tbody)return;
   const idx=tbody.children.length+1;
   const tr=document.createElement('tr');
   tr.innerHTML=`<td style="color:var(--muted);font-size:11px;text-align:center;padding:6px 4px">${idx}</td>`+
-    cfg.fields.map((f,i)=>`<td><input type="number" min="1" max="5" step="0.1" placeholder="—" value="${data&&data[f]!=null?data[f]:''}" oninput="refreshRowCalc('${type}');refreshPreview()"></td>`).join('')+
+    cfg.fields.map((f,i)=>`<td><input type="number" min="1" max="${cfg.max}" step="0.1" placeholder="—" value="${data&&data[f]!=null?data[f]:''}" oninput="refreshRowCalc('${type}');refreshPreview()"></td>`).join('')+
     `<td><button class="remove-row-btn" onclick="this.closest('tr').remove();renumberRows('${type}');refreshRowCalc('${type}');refreshPreview()">×</button></td>`;
   tbody.appendChild(tr);
 }
@@ -1139,11 +1392,15 @@ function saveAllCapture(){
   m.expedia.acum={ score:parseFloat(document.getElementById('exAcumScore').value)||null, reviews:parseInt(document.getElementById('exAcumReviews').value)||0 };
 
   // Google
-  m.google={ score:parseFloat(document.getElementById('googleScore').value)||null, reviews:parseInt(document.getElementById('googleReviews').value)||0,
+  m.google={ score:parseFloat(document.getElementById('googleScore').value)||null,
+             reviews:parseInt(document.getElementById('googleReviews').value)||0,
+             rows:getRows('google').filter(r=>r.score!=null),
              acum:{ score:parseFloat(document.getElementById('gAcumScore').value)||null, reviews:parseInt(document.getElementById('gAcumReviews').value)||0 } };
 
   // HW
-  m.hw={ score:parseFloat(document.getElementById('hwScore').value)||null, reviews:parseInt(document.getElementById('hwReviews').value)||0,
+  m.hw={ score:parseFloat(document.getElementById('hwScore').value)||null,
+         reviews:parseInt(document.getElementById('hwReviews').value)||0,
+         rows:getRows('hw').filter(r=>r.score!=null),
          acum:{ score:parseFloat(document.getElementById('hwAcumScore').value)||null, reviews:parseInt(document.getElementById('hwAcumReviews').value)||0 } };
 
   // Hosts
