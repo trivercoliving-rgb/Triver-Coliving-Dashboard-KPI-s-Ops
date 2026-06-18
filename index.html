@@ -945,6 +945,7 @@ function drawDonut(canvas, high, medium, low, size){
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
   const cx=size/2, cy=size/2, R=size/2-5, r=R*0.54;
+  const midR=(R+r)/2; // radius at the visual center of the arc band
   const total=high+medium+low;
   ctx.clearRect(0,0,size,size);
   if(total===0){
@@ -959,6 +960,8 @@ function drawDonut(canvas, high, medium, low, size){
   ].filter(s=>s.v>0);
   const gap=slices.length>1?0.03:0;
   let start=-Math.PI/2;
+
+  // Pass 1 — draw arcs
   slices.forEach(s=>{
     const sweep=(s.v/total)*Math.PI*2;
     ctx.beginPath();
@@ -967,6 +970,27 @@ function drawDonut(canvas, high, medium, low, size){
     ctx.arc(cx,cy,r,start+sweep-gap,start+gap,true);
     ctx.closePath();
     ctx.fillStyle=s.c; ctx.fill();
+    start+=sweep;
+  });
+
+  // Pass 2 — draw percentage labels inside each arc
+  // Minimum arc sweep to show a label (avoid cramped text)
+  const minSweepForLabel = size < 130 ? 0.55 : 0.42;
+  const fontSize = size < 130 ? Math.max(9, size*0.082) : Math.max(10, size*0.082);
+  start=-Math.PI/2;
+  slices.forEach(s=>{
+    const sweep=(s.v/total)*Math.PI*2;
+    if(sweep >= minSweepForLabel){
+      const midAngle=start+sweep/2;
+      const lx=cx+Math.cos(midAngle)*midR;
+      const ly=cy+Math.sin(midAngle)*midR;
+      const pct=Math.round(s.v/total*100)+'%';
+      ctx.fillStyle='rgba(255,255,255,0.92)';
+      ctx.font=`700 ${fontSize}px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(pct, lx, ly);
+    }
     start+=sweep;
   });
 }
