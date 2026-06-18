@@ -1332,25 +1332,79 @@ function processGoogleCSV(input){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const lines=e.target.result.split('\n').filter(l=>l.trim());
-      if(lines.length<2){showStatus('googleStatus','Archivo vacío.',false);return;}
-      const headers=parseCSV(lines[0]);
-      const rCol=headers.findIndex(h=>/rating|star|score|puntuaci/i.test(h));
-      const dCol=headers.findIndex(h=>/date|fecha|time/i.test(h));
-      if(rCol<0){showStatus('googleStatus','No se encontró columna de calificación.',false);return;}
-      const [tMon,tYear]=currentMes.split(' ');const tMonIdx=MONTHS_ES.indexOf(tMon);
-      let sum=0,count=0;
-      for(let i=1;i<lines.length;i++){
-        const vals=parseCSV(lines[i]);const rating=parseFloat(vals[rCol]);if(isNaN(rating))continue;
-        if(dCol>=0&&vals[dCol]){const d=new Date(vals[dCol]);if(!isNaN(d)&&(d.getMonth()!==tMonIdx||d.getFullYear()!==parseInt(tYear)))continue;}
-        sum+=rating;count++;
+      // Use the robust full-file parser (handles quoted fields with newlines)
+      const allRows=parseCSVFull(e.target.result);
+      if(allRows.length<2){showStatus('googleStatus','Archivo vacío o ilegible.',false);return;}
+
+      const headers=allRows[0].map(h=>h.trim());
+
+      // Detect rating column — try common names
+      const rCol=headers.findIndex(h=>/rating|star|score|puntuaci[oó]n|calificaci[oó]n|estrellas/i.test(h));
+      if(rCol<0){
+        showStatus('googleStatus',`No se encontró columna de calificación. Columnas detectadas: ${headers.join(', ')}`,false);
+        return;
       }
-      if(count===0){showStatus('googleStatus',`Sin reseñas para ${currentMes}.`,false);return;}
-      document.getElementById('googleScore').value=(sum/count).toFixed(2);
+
+      // Detect date column
+      const dCol=headers.findIndex(h=>/date|fecha|time|published|publicad/i.test(h));
+
+      const [tMon,tYear]=currentMes.split(' ');
+      const tMonIdx=MONTHS_ES.indexOf(tMon);
+      const tYearInt=parseInt(tYear);
+
+      const monthRows=[];   // reseñas del mes seleccionado
+      const allValid=[];    // todas las reseñas con rating válido
+
+      for(let i=1;i<allRows.length;i++){
+        const vals=allRows[i];
+        const ratingRaw=vals[rCol];
+        // Google Takeout a veces exporta "4 stars" o solo "4"
+        const rating=parseFloat(String(ratingRaw).replace(/[^0-9.]/g,''));
+        if(isNaN(rating)||rating<=0) continue;
+        allValid.push(rating);
+
+        // Filter by month if date column exists
+        if(dCol>=0 && vals[dCol]){
+          const d=new Date(vals[dCol]);
+          if(!isNaN(d)){
+            if(d.getMonth()===tMonIdx && d.getFullYear()===tYearInt){
+              monthRows.push(rating);
+            }
+            continue; // skip non-matching months when date is valid
+          }
+        }
+        // No date column or unparseable date — assign to current month
+        if(dCol<0) monthRows.push(rating);
+      }
+
+      const count=monthRows.length;
+      const total=allValid.length;
+
+      if(count===0 && dCol>=0){
+        showStatus('googleStatus',`Sin reseñas para ${currentMes} en este archivo. Total en archivo: ${total}`,false);
+        return;
+      }
+      if(count===0){
+        showStatus('googleStatus','No se encontraron calificaciones válidas.',false);
+        return;
+      }
+
+      // Update score and count fields
+      const avg=monthRows.reduce((a,b)=>a+b,0)/count;
+      document.getElementById('googleScore').value=avg.toFixed(2);
       document.getElementById('googleReviews').value=count;
-      showStatus('googleStatus',`✓ ${count} reseñas. Promedio: ${(sum/count).toFixed(2)}`,true);
+
+      // ── KEY FIX: populate individual rows so YTD classification works ──
+      // Clear existing rows and rebuild from this month's data
+      const tbody=document.getElementById('googleRows');
+      tbody.innerHTML='';
+      monthRows.forEach(r=>addRow('google',{score:r}));
+      refreshRowCalc('google');
+
+      const dateNote=dCol>=0?` (filtradas de ${total} totales en el archivo)`:'';
+      showStatus('googleStatus',`✓ ${count} reseñas para ${currentMes}${dateNote}. Promedio: ${avg.toFixed(2)}`,true);
       refreshPreview();
-    }catch(err){showStatus('googleStatus','Error: '+err.message,false);}
+    }catch(err){showStatus('googleStatus','Error al procesar el archivo: '+err.message,false);}
   };
   reader.readAsText(file,'utf-8');
 }
