@@ -161,6 +161,26 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 #toast.show{opacity:1}
 #toast.err{background:var(--red);color:#fff}
 
+/* QA CSV UPLOAD & HK BREAKDOWN */
+.qa-status-bar{font-size:11px;padding:6px 10px;border-radius:6px;margin-top:6px;display:none}
+.qa-status-bar.ok{background:var(--green-dim);color:var(--green);display:block}
+.qa-status-bar.err{background:var(--red-dim);color:var(--red);display:block}
+.hk-breakdown{margin-top:10px}
+.hk-breakdown-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.hk-table{width:100%;border-collapse:collapse;font-size:12px}
+.hk-table th{color:var(--muted);font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:5px 8px;text-align:left;font-weight:600;background:var(--surface2)}
+.hk-table td{padding:6px 8px;border-top:1px solid var(--border)}
+.hk-table td.num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.hk-table tr:hover td{background:var(--surface2)}
+.hk-bar-wrap{display:flex;align-items:center;gap:6px}
+.hk-bar{height:5px;border-radius:3px;background:var(--accent);flex-shrink:0;min-width:2px}
+
+/* Dashboard HK detail cards */
+.hk-detail-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-top:10px}
+.hk-detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.hk-detail-card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+@media(max-width:700px){.hk-detail-grid{grid-template-columns:1fr}}
+
 /* YTD SCORE ANALYSIS */
 .ytd-combined{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin-bottom:10px}
 .ytd-donut-wrap{position:relative;flex-shrink:0}
@@ -185,6 +205,12 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 .ytd-legend-pct{font-weight:700}
 .ytd-no-data{font-size:12px;color:var(--muted);padding:16px 0}
 
+.btn-backup{background:#1A2A1A;color:var(--green);border:1px solid var(--green);padding:6px 12px;font-size:12px;font-weight:600;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:5px}
+.btn-backup:hover{background:var(--green);color:#000}
+.btn-restore{background:#1A1A2A;color:var(--accent);border:1px solid var(--accent);padding:6px 12px;font-size:12px;font-weight:600;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:5px}
+.btn-restore:hover{background:var(--accent);color:#fff}
+.backup-hint{font-size:10px;color:var(--muted);white-space:nowrap}
+
 /* RESPONSIVE */
 @media(max-width:700px){
   header,main{padding-left:14px;padding-right:14px}
@@ -203,6 +229,9 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   <div class="header-controls">
     <select id="monthSelector"></select>
     <button class="btn-primary" onclick="openNewMonthModal()">+ Nuevo mes</button>
+    <button class="btn-backup" onclick="exportBackup()" title="Descarga un archivo .json con todos tus datos">⬇ Exportar</button>
+    <button class="btn-restore" onclick="document.getElementById('importFile').click()" title="Restaura datos desde un archivo .json de backup">⬆ Importar</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
   </div>
 </header>
 
@@ -230,6 +259,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 
   <div class="section-label">KPIs — Housekeeping</div>
   <div class="cards-grid" id="hkCards"></div>
+  <div class="hk-detail-grid" id="hkDetailGrid"></div>
 
   <div class="section-label">KPIs — Mantenimiento</div>
   <div class="cards-grid" id="mantCards"></div>
@@ -488,10 +518,17 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <!-- KPIs HOSTS -->
     <div class="source-card span2">
       <div class="source-header">
-        <span class="source-name">KPIs — Hosts</span>
-        <span class="source-type">Whistle · QA Auditorías</span>
+        <span class="source-name">KPIs — Hosts &amp; Housekeeping</span>
+        <span class="source-type">CSV Auditorías de Calidad</span>
       </div>
       <div class="source-body">
+        <div class="upload-zone" id="qaZone" onclick="document.getElementById('qaFile').click()" ondragover="dragOver(event,'qaZone')" ondragleave="dragLeave('qaZone')" ondrop="dropFile(event,'qa')">
+          <input type="file" id="qaFile" accept=".csv" onchange="processQACSV(this)">
+          <div class="upload-icon">📋</div>
+          <div class="upload-label">Arrastra el CSV de Auditorías QA<br>o <strong>haz clic para seleccionar</strong></div>
+        </div>
+        <div class="qa-status-bar" id="qaStatus"></div>
+        <hr class="src-divider">
         <div class="field-grid cols3">
           <div class="field-wrap">
             <label>Response Time promedio (min)</label>
@@ -500,8 +537,13 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           </div>
           <div class="field-wrap">
             <label>% Auditorías QA completadas</label>
-            <input type="number" id="qaCompletion" min="0" max="100" step="0.1" placeholder="55" oninput="refreshPreview()">
-            <span class="hint">Meta: &gt; 50% · Sobre limpiezas de check-out</span>
+            <input type="number" id="qaCompletion" min="0" max="100" step="0.1" placeholder="55" oninput="refreshPreview()" title="Se calcula automáticamente desde el CSV">
+            <span class="hint">Meta: &gt; 50% · Se calcula desde CSV</span>
+          </div>
+          <div class="field-wrap">
+            <label>Total auditorías del mes</label>
+            <input type="number" id="audTotal" min="0" placeholder="—" readonly style="opacity:.6">
+            <span class="hint">Calculado desde CSV</span>
           </div>
         </div>
         <hr class="src-divider">
@@ -517,6 +559,8 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           </div>
         </div>
         <div class="calc-result" id="auditShareCalc"></div>
+        <hr class="src-divider">
+        <div id="qaBreakdownCapture"></div>
       </div>
     </div>
 
@@ -534,9 +578,9 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
             <span class="hint">Meta: ≥ 400 (check-outs + cortesías)</span>
           </div>
           <div class="field-wrap">
-            <label>% Hallazgos en auditorías</label>
-            <input type="number" id="hallazgos" min="0" max="100" step="0.1" placeholder="15" oninput="refreshPreview()">
-            <span class="hint">Menor es mejor</span>
+            <label>% Hallazgos HK</label>
+            <input type="number" id="hallazgos" min="0" max="100" step="0.1" placeholder="—" readonly style="opacity:.6">
+            <span class="hint">Calculado automáticamente desde CSV QA</span>
           </div>
         </div>
       </div>
@@ -848,7 +892,259 @@ function renderDashboard(){
     mkCard('Tiempo Prom. Ticket',mant.tiempo!=null?mant.tiempo.toFixed(1)+' h':'—','Fuente: Whistle',tSem,null,'Meta: ≤ 24 h · Arturo Cruz')+
     mkCard('% Tickets en Tiempo',mant.cumplimiento!=null?mant.cumplimiento.toFixed(1)+'%':'—','',cSem,null,'Meta: ≥ 90%');
 
+  renderHKDetail(md);
   renderYTD();
+}
+
+// ═══════════════════════════════════════════════
+//  QA CSV PROCESSOR
+// ═══════════════════════════════════════════════
+
+// Columns fully excluded from HK details
+const QA_EXCLUDE_FULL = new Set(['Cerradura Y Salto','Puerta de Baño','Extractores','Puerta']);
+// Metadata columns to skip
+const QA_SKIP = new Set(['Timestamp','Email Address','Nombre de persona que realiza QA',
+  'Fecha ','Persona que realizó la limpieza','# de Habitación','¿Es Hostal?','¿Es Habitación Doble?']);
+// Toallas: only 'Incompletas' counts as HK detail
+const TOALLAS_COL = 'Toallas';
+const TOALLAS_OK_EXTRA = new Set(['Sucias/Manchadas','Completas']);
+// Cama col 26 (exact name): exclude only Manchas/Suciedad
+const CAMA_COL = 'Cama';
+const CAMA_EXCLUDE_VAL = 'Manchas/Suciedad';
+
+function qaIsOk(col, val) {
+  const v = val.trim();
+  if (!v) return true;
+  const vl = v.toLowerCase();
+  if (vl === 'ok' || vl === 'no') return true;
+  if (vl.startsWith('completo') || vl.startsWith('completa')) return true;
+  if (col === TOALLAS_COL && TOALLAS_OK_EXTRA.has(v)) return true;
+  if (col === CAMA_COL && v === CAMA_EXCLUDE_VAL) return true;
+  return false;
+}
+
+function qaIsHKDetail(col, val) {
+  if (QA_SKIP.has(col)) return false;
+  if (QA_EXCLUDE_FULL.has(col)) return false;
+  return !qaIsOk(col, val);
+}
+
+function parseQATimestamp(ts) {
+  // Two formats: 'DD/MM/YY HH:MM' or 'M/D/YYYY HH:MM:SS'
+  const datePart = ts.trim().split(' ')[0];
+  const parts = datePart.split('/');
+  if (parts.length < 3) return null;
+  const p0 = parseInt(parts[0]), p1 = parseInt(parts[1]), p2 = parseInt(parts[2]);
+  if (p1 > 12) {
+    // Format B: M/D/YYYY
+    return { mon: p0, yr: p2 };
+  } else {
+    // Format A: DD/MM/YY
+    return { mon: p1, yr: p2 < 100 ? p2 + 2000 : p2 };
+  }
+}
+
+function normalizeQAName(n) {
+  const s = n.trim().toLowerCase();
+  if (s.includes('sofia') || s.includes('sofía')) return 'Sofía';
+  if (s.includes('andrea')) return 'Andrea';
+  return null;
+}
+
+function processQACSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const allRows = parseCSVFull(e.target.result);
+      if (allRows.length < 2) { showQAStatus('Archivo vacío o ilegible.', false); return; }
+
+      const headers = allRows[0].map(h => h.trim());
+      const tsIdx = headers.findIndex(h => /timestamp/i.test(h));
+      const qaIdx = headers.findIndex(h => /nombre.*qa|persona.*qa/i.test(h));
+      const cleanerIdx = headers.findIndex(h => /persona.*limpieza|realiz.*limpieza/i.test(h));
+      if (tsIdx < 0) { showQAStatus('No se encontró columna Timestamp.', false); return; }
+
+      const [tMon, tYear] = currentMes.split(' ');
+      const tMonIdx = MONTHS_ES.indexOf(tMon) + 1; // 1-based
+      const tYearInt = parseInt(tYear);
+
+      // Audit columns (not metadata, not skipped)
+      const auditCols = headers.filter(h => !QA_SKIP.has(h));
+
+      let totalAudits = 0, sofiaN = 0, andreaaN = 0;
+      let totalDetails = 0, totalCells = 0;
+      const detailByCategory = {}; // col → count
+      const detailByCleaner = {};  // cleaner → count
+
+      for (let i = 1; i < allRows.length; i++) {
+        const vals = allRows[i];
+        if (vals.length < 2) continue;
+        const rowObj = {};
+        headers.forEach((h, j) => rowObj[h] = (vals[j] || '').trim());
+
+        const parsed = parseQATimestamp(rowObj['Timestamp'] || '');
+        if (!parsed || parsed.mon !== tMonIdx || parsed.yr !== tYearInt) continue;
+
+        totalAudits++;
+        const qaName = normalizeQAName(rowObj[headers[qaIdx]] || '');
+        if (qaName === 'Sofía') sofiaN++;
+        else if (qaName === 'Andrea') andreaaN++;
+
+        const cleaner = (rowObj[headers[cleanerIdx]] || 'Desconocido').trim();
+
+        auditCols.forEach(col => {
+          const val = rowObj[col] || '';
+          if (!val) return;
+          totalCells++;
+          if (qaIsHKDetail(col, val)) {
+            totalDetails++;
+            detailByCategory[col] = (detailByCategory[col] || 0) + 1;
+            detailByCleaner[cleaner] = (detailByCleaner[cleaner] || 0) + 1;
+          }
+        });
+      }
+
+      if (totalAudits === 0) {
+        showQAStatus(`Sin auditorías para ${currentMes} en este archivo. Total filas: ${allRows.length - 1}`, false);
+        return;
+      }
+
+      const hallazgosPct = totalCells > 0 ? (totalDetails / totalCells * 100) : 0;
+
+      // Sort breakdowns
+      const catSorted = Object.entries(detailByCategory).sort((a, b) => b[1] - a[1]);
+      const cleanerSorted = Object.entries(detailByCleaner).sort((a, b) => b[1] - a[1]);
+
+      // Build QA data object
+      const qaData = {
+        total: totalAudits,
+        sofia: sofiaN,
+        andrea: andreaaN,
+        hallazgos_pct: hallazgosPct,
+        total_details: totalDetails,
+        total_cells: totalCells,
+        by_category: catSorted,
+        by_cleaner: cleanerSorted
+      };
+
+      // Persist to appData
+      const data = loadData();
+      const idx = data.meses.findIndex(m => m.mes === currentMes);
+      if (idx >= 0) {
+        data.meses[idx].qa = qaData;
+        data.meses[idx].hosts = data.meses[idx].hosts || {};
+        data.meses[idx].hosts.aud_sofia = sofiaN;
+        data.meses[idx].hosts.aud_andrea = andreaaN;
+        data.meses[idx].hosts.aud_total = totalAudits;
+        data.meses[idx].hk = data.meses[idx].hk || {};
+        data.meses[idx].hk.hallazgos = parseFloat(hallazgosPct.toFixed(2));
+        saveData(data); appData = data;
+      }
+
+      // Update form fields
+      setVal('audSofia', sofiaN);
+      setVal('audAndrea', andreaaN);
+      setVal('audTotal', totalAudits);
+      setVal('hallazgos', hallazgosPct.toFixed(2));
+      refreshAuditShare();
+
+      showQAStatus(`✓ ${totalAudits} auditorías · Sofía: ${sofiaN} · Andrea: ${andreaaN} · ${totalDetails} detalles HK (${hallazgosPct.toFixed(1)}%)`, true);
+      renderQABreakdownCapture(qaData);
+      renderDashboard();
+      refreshPreview();
+
+    } catch (err) { showQAStatus('Error: ' + err.message, false); }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function showQAStatus(msg, ok) {
+  const el = document.getElementById('qaStatus');
+  el.textContent = msg;
+  el.className = 'qa-status-bar ' + (ok ? 'ok' : 'err');
+}
+
+function renderQABreakdownCapture(qa) {
+  if (!qa) return;
+  const el = document.getElementById('qaBreakdownCapture');
+  if (!el) return;
+  const maxCat = qa.by_category.length ? qa.by_category[0][1] : 1;
+  const maxCln = qa.by_cleaner.length ? qa.by_cleaner[0][1] : 1;
+
+  el.innerHTML = `
+    <div class="hk-breakdown">
+      <div class="hk-breakdown-title">Detalles HK por Categoría</div>
+      <table class="hk-table">
+        <thead><tr><th>Categoría</th><th style="text-align:right"># Detalles</th></tr></thead>
+        <tbody>
+          ${qa.by_category.map(([cat, n]) => `
+            <tr><td>
+              <div class="hk-bar-wrap">
+                <div class="hk-bar" style="width:${Math.round(n/maxCat*80)}px"></div>
+                <span>${cat}</span>
+              </div>
+            </td><td class="num">${n}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="hk-breakdown" style="margin-top:12px">
+      <div class="hk-breakdown-title">Detalles HK por Integrante</div>
+      <table class="hk-table">
+        <thead><tr><th>Integrante</th><th style="text-align:right"># Detalles</th></tr></thead>
+        <tbody>
+          ${qa.by_cleaner.map(([name, n]) => `
+            <tr><td>
+              <div class="hk-bar-wrap">
+                <div class="hk-bar" style="width:${Math.round(n/maxCln*80)}px;background:var(--yellow)"></div>
+                <span>${name}</span>
+              </div>
+            </td><td class="num">${n}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderHKDetail(md) {
+  const grid = document.getElementById('hkDetailGrid');
+  if (!grid) return;
+  const qa = md && md.qa;
+  if (!qa || !qa.total) { grid.innerHTML = ''; return; }
+
+  const maxCat = qa.by_category.length ? qa.by_category[0][1] : 1;
+  const maxCln = qa.by_cleaner.length ? qa.by_cleaner[0][1] : 1;
+
+  grid.innerHTML = `
+    <div class="hk-detail-card">
+      <div class="hk-detail-card-title">Detalles por Categoría</div>
+      <table class="hk-table">
+        <thead><tr><th>Categoría</th><th style="text-align:right">#</th></tr></thead>
+        <tbody>
+          ${qa.by_category.map(([cat, n]) => `
+            <tr><td>
+              <div class="hk-bar-wrap">
+                <div class="hk-bar" style="width:${Math.round(n/maxCat*70)}px"></div>
+                <span style="font-size:11px">${cat}</span>
+              </div>
+            </td><td class="num">${n}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="hk-detail-card">
+      <div class="hk-detail-card-title">Detalles por Integrante</div>
+      <table class="hk-table">
+        <thead><tr><th>Integrante</th><th style="text-align:right">#</th></tr></thead>
+        <tbody>
+          ${qa.by_cleaner.map(([name, n]) => `
+            <tr><td>
+              <div class="hk-bar-wrap">
+                <div class="hk-bar" style="width:${Math.round(n/maxCln*70)}px;background:var(--yellow)"></div>
+                <span style="font-size:11px">${name}</span>
+              </div>
+            </td><td class="num">${n}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -1146,6 +1442,18 @@ function updateCaptureTab(){
   setVal('qaCompletion', md.hosts&&md.hosts.qa_completion!=null?md.hosts.qa_completion:'');
   setVal('audSofia', md.hosts&&md.hosts.aud_sofia!=null?md.hosts.aud_sofia:'');
   setVal('audAndrea', md.hosts&&md.hosts.aud_andrea!=null?md.hosts.aud_andrea:'');
+  setVal('audTotal', md.hosts&&md.hosts.aud_total!=null?md.hosts.aud_total:'');
+
+  // Restore QA status indicator if data was loaded
+  const qaEl=document.getElementById('qaStatus');
+  if(md.qa&&md.qa.total>0){
+    qaEl.textContent=`✓ ${md.qa.total} auditorías cargadas para ${currentMes}`;
+    qaEl.className='qa-status-bar ok';
+    renderQABreakdownCapture(md.qa);
+  } else {
+    qaEl.className='qa-status-bar';
+    document.getElementById('qaBreakdownCapture').innerHTML='';
+  }
 
   // HK
   setVal('limpiezas', md.hk&&md.hk.limpiezas!=null?md.hk.limpiezas:'');
@@ -1476,14 +1784,17 @@ function saveAllCapture(){
          rows:getRows('hw').filter(r=>r.score!=null),
          acum:{ score:parseFloat(document.getElementById('hwAcumScore').value)||null, reviews:parseInt(document.getElementById('hwAcumReviews').value)||0 } };
 
-  // Hosts
+  // Hosts — preserve qa-calculated fields, only update manual ones
+  const existingQA = m.qa || null;
   m.hosts={ response_time:parseFloat(document.getElementById('responseTime').value)||null,
              qa_completion:parseFloat(document.getElementById('qaCompletion').value)||null,
              aud_sofia:parseInt(document.getElementById('audSofia').value)||null,
-             aud_andrea:parseInt(document.getElementById('audAndrea').value)||null };
+             aud_andrea:parseInt(document.getElementById('audAndrea').value)||null,
+             aud_total:parseInt(document.getElementById('audTotal').value)||null };
 
-  // HK
-  m.hk={ limpiezas:parseInt(document.getElementById('limpiezas').value)||null, hallazgos:parseFloat(document.getElementById('hallazgos').value)||null };
+  // HK — hallazgos comes from QA CSV (readonly field)
+  m.hk={ limpiezas:parseInt(document.getElementById('limpiezas').value)||null,
+          hallazgos:parseFloat(document.getElementById('hallazgos').value)||null };
 
   // Mant
   m.mant={ tiempo:parseFloat(document.getElementById('mantTiempo').value)||null, cumplimiento:parseFloat(document.getElementById('mantCumplimiento').value)||null };
@@ -1491,6 +1802,7 @@ function saveAllCapture(){
   saveData(data);appData=data;
   renderDashboard();renderChart();
   showToast('Datos guardados correctamente');
+  setTimeout(()=>showToast('💾 Recuerda exportar tu backup desde el botón ⬇ Exportar'),3500);
 }
 
 // ═══════════════════════════════════════════════
@@ -1512,11 +1824,12 @@ function createNewMonth(){
     booking:{reviews:[],computed:null,rc:0,acum:{score:null,reviews:0}},
     airbnb:{general_score:null,general_reviews:0,rows:[],acum:{score:null,reviews:0}},
     expedia:{rows:[],acum:{score:null,reviews:0}},
-    google:{score:null,reviews:0,acum:{score:null,reviews:0}},
-    hw:{score:null,reviews:0,acum:{score:null,reviews:0}},
-    hosts:{response_time:null,qa_completion:null,aud_sofia:null,aud_andrea:null},
+    google:{score:null,reviews:0,rows:[],acum:{score:null,reviews:0}},
+    hw:{score:null,reviews:0,rows:[],acum:{score:null,reviews:0}},
+    hosts:{response_time:null,qa_completion:null,aud_sofia:null,aud_andrea:null,aud_total:null},
     hk:{limpiezas:null,hallazgos:null},
-    mant:{tiempo:null,cumplimiento:null}
+    mant:{tiempo:null,cumplimiento:null},
+    qa:null
   });
   data.meses.sort((a,b)=>{const p=s=>{const[mo,yr]=s.split(' ');return parseInt(yr)*12+MONTHS_ES.indexOf(mo);};return p(a.mes)-p(b.mes);});
   saveData(data);appData=data;currentMes=mes;
@@ -1551,6 +1864,11 @@ function dragOver(e,id){e.preventDefault();document.getElementById(id).classList
 function dragLeave(id){document.getElementById(id).classList.remove('dragover');}
 function dropFile(e,type){
   e.preventDefault();const file=e.dataTransfer.files[0];if(!file)return;
+  if(type==='qa'){
+    const input=document.getElementById('qaFile');
+    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+    processQACSV(input);dragLeave('qaZone');return;
+  }
   const id=type==='booking'?'bookingFile':'googleFile';
   const input=document.getElementById(id);
   const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
@@ -1561,6 +1879,43 @@ let _tt=null;
 function showToast(msg,type='ok'){
   const t=document.getElementById('toast');t.textContent=(type==='ok'?'✓ ':'')+msg;
   t.className='show'+(type==='err'?' err':'');clearTimeout(_tt);_tt=setTimeout(()=>t.className='',3000);
+}
+
+// ═══════════════════════════════════════════════
+//  BACKUP / RESTORE
+// ═══════════════════════════════════════════════
+function exportBackup(){
+  const data=localStorage.getItem(STORAGE_KEY);
+  if(!data){showToast('No hay datos para exportar','err');return;}
+  const now=new Date();
+  const stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  const filename=`triver_backup_${stamp}.json`;
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(data);
+  a.download=filename;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast(`Backup exportado: ${filename}`);
+}
+
+function importBackup(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const parsed=JSON.parse(e.target.result);
+      if(!parsed.meses||!Array.isArray(parsed.meses)){
+        showToast('Archivo inválido — no contiene datos de TRIVER','err');return;
+      }
+      localStorage.setItem(STORAGE_KEY,e.target.result);
+      appData=parsed;currentMes=null;
+      render();
+      showToast(`✓ ${parsed.meses.length} meses restaurados correctamente`);
+    }catch(err){
+      showToast('Error al leer el archivo: '+err.message,'err');
+    }
+  };
+  reader.readAsText(file,'utf-8');
+  input.value='';
 }
 
 // ═══════════════════════════════════════════════
