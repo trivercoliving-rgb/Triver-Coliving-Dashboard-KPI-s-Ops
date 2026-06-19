@@ -1332,79 +1332,74 @@ function processGoogleCSV(input){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      // Use the robust full-file parser (handles quoted fields with newlines)
       const allRows=parseCSVFull(e.target.result);
       if(allRows.length<2){showStatus('googleStatus','Archivo vacío o ilegible.',false);return;}
 
       const headers=allRows[0].map(h=>h.trim());
-
-      // Detect rating column — try common names
       const rCol=headers.findIndex(h=>/rating|star|score|puntuaci[oó]n|calificaci[oó]n|estrellas/i.test(h));
+      const dCol=headers.findIndex(h=>/^review\s*date$|^date$|^fecha/i.test(h));
+
       if(rCol<0){
-        showStatus('googleStatus',`No se encontró columna de calificación. Columnas detectadas: ${headers.join(', ')}`,false);
+        showStatus('googleStatus',`No se encontró columna de calificación. Columnas: ${headers.join(', ')}`,false);
         return;
       }
 
-      // Detect date column
-      const dCol=headers.findIndex(h=>/date|fecha|time|published|publicad/i.test(h));
-
       const [tMon,tYear]=currentMes.split(' ');
-      const tMonIdx=MONTHS_ES.indexOf(tMon);
+      const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
       const tYearInt=parseInt(tYear);
 
-      const monthRows=[];   // reseñas del mes seleccionado
-      const allValid=[];    // todas las reseñas con rating válido
+      // Parse DD/MM/YY or DD/MM/YYYY → {day,mon0,year}
+      function parseGoogleDate(str){
+        if(!str) return null;
+        const parts=str.trim().split('/');
+        if(parts.length<3) return null;
+        const day=parseInt(parts[0]);
+        const mon0=parseInt(parts[1])-1; // 0-based month
+        let yr=parseInt(parts[2]);
+        if(yr<100) yr+=2000; // YY → YYYY
+        if(isNaN(day)||isNaN(mon0)||isNaN(yr)) return null;
+        return {mon0, yr};
+      }
+
+      const monthRows=[];  // ratings for selected month
+      const allValid=[];   // all valid ratings in file
 
       for(let i=1;i<allRows.length;i++){
         const vals=allRows[i];
-        const ratingRaw=vals[rCol];
-        // Google Takeout a veces exporta "4 stars" o solo "4"
-        const rating=parseFloat(String(ratingRaw).replace(/[^0-9.]/g,''));
-        if(isNaN(rating)||rating<=0) continue;
+        const rating=parseInt(vals[rCol]);
+        if(isNaN(rating)||rating<=0||rating>5) continue;
         allValid.push(rating);
 
-        // Filter by month if date column exists
-        if(dCol>=0 && vals[dCol]){
-          const d=new Date(vals[dCol]);
-          if(!isNaN(d)){
-            if(d.getMonth()===tMonIdx && d.getFullYear()===tYearInt){
-              monthRows.push(rating);
-            }
-            continue; // skip non-matching months when date is valid
+        if(dCol>=0){
+          const parsed=parseGoogleDate(vals[dCol]);
+          if(parsed && parsed.mon0===tMonIdx && parsed.yr===tYearInt){
+            monthRows.push(rating);
           }
+        } else {
+          monthRows.push(rating); // no date column → assign all to current month
         }
-        // No date column or unparseable date — assign to current month
-        if(dCol<0) monthRows.push(rating);
       }
 
       const count=monthRows.length;
-      const total=allValid.length;
-
-      if(count===0 && dCol>=0){
-        showStatus('googleStatus',`Sin reseñas para ${currentMes} en este archivo. Total en archivo: ${total}`,false);
-        return;
-      }
       if(count===0){
-        showStatus('googleStatus','No se encontraron calificaciones válidas.',false);
+        showStatus('googleStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${allValid.length}`,false);
         return;
       }
 
-      // Update score and count fields
       const avg=monthRows.reduce((a,b)=>a+b,0)/count;
       document.getElementById('googleScore').value=avg.toFixed(2);
       document.getElementById('googleReviews').value=count;
 
-      // ── KEY FIX: populate individual rows so YTD classification works ──
-      // Clear existing rows and rebuild from this month's data
+      // Populate individual rows → enables YTD classification
       const tbody=document.getElementById('googleRows');
       tbody.innerHTML='';
       monthRows.forEach(r=>addRow('google',{score:r}));
       refreshRowCalc('google');
 
-      const dateNote=dCol>=0?` (filtradas de ${total} totales en el archivo)`:'';
-      showStatus('googleStatus',`✓ ${count} reseñas para ${currentMes}${dateNote}. Promedio: ${avg.toFixed(2)}`,true);
+      const note=dCol>=0?` (filtradas de ${allValid.length} en el archivo)`:'';
+      showStatus('googleStatus',`✓ ${count} reseñas para ${currentMes}${note}. Promedio: ${avg.toFixed(2)}`,true);
       refreshPreview();
-    }catch(err){showStatus('googleStatus','Error al procesar el archivo: '+err.message,false);}
+    }catch(err){showStatus('googleStatus','Error: '+err.message,false);}
   };
   reader.readAsText(file,'utf-8');
 }
