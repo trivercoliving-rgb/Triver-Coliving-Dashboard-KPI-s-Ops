@@ -1248,14 +1248,22 @@ function getYTDCounts(mesData){
     add(bk, classify10(r['Review score']));
   });
 
-  // Airbnb — general_score (1–5) weighted by general_reviews
-  if(mesData.airbnb&&mesData.airbnb.general_score!=null&&mesData.airbnb.general_reviews>0){
+  // Airbnb — classify each individual rating from rating_list (1–5 scale)
+  // Falls back to weighting the average if rating_list not available (legacy data)
+  const abRatingList=(mesData.airbnb&&mesData.airbnb.rating_list)||[];
+  if(abRatingList.length>0){
+    abRatingList.forEach(r=>{ add(ab, classify5(r)); });
+  } else if(mesData.airbnb&&mesData.airbnb.general_score!=null&&mesData.airbnb.general_reviews>0){
     const cls=classify5(mesData.airbnb.general_score);
     if(cls){ ab[cls]+=mesData.airbnb.general_reviews; ab.total+=mesData.airbnb.general_reviews; }
   }
 
-  // Expedia — general_score10 (2–10) weighted by general_reviews
-  if(mesData.expedia&&mesData.expedia.general_score10!=null&&mesData.expedia.general_reviews>0){
+  // Expedia — classify each individual rating from rating_list (2–10 scale)
+  // Falls back to weighting the average if rating_list not available (legacy data)
+  const exRatingList=(mesData.expedia&&mesData.expedia.rating_list)||[];
+  if(exRatingList.length>0){
+    exRatingList.forEach(r=>{ add(ex, classify10(r)); });
+  } else if(mesData.expedia&&mesData.expedia.general_score10!=null&&mesData.expedia.general_reviews>0){
     const cls=classify10(mesData.expedia.general_score10);
     if(cls){ ex[cls]+=mesData.expedia.general_reviews; ex.total+=mesData.expedia.general_reviews; }
   }
@@ -2044,6 +2052,7 @@ function processAirbnbCSV(input){
       if(idx>=0){
         data.meses[idx].airbnb.general_score=parseFloat(avg.toFixed(3));
         data.meses[idx].airbnb.general_reviews=count;
+        data.meses[idx].airbnb.rating_list=monthRatings; // individual ratings for YTD classification
         saveData(data);appData=data;
       }
 
@@ -2124,6 +2133,7 @@ function processExpediaCSV(input){
       if(idx>=0){
         data.meses[idx].expedia.general_score10=parseFloat(avg.toFixed(2));
         data.meses[idx].expedia.general_reviews=count;
+        data.meses[idx].expedia.rating_list=monthRatings; // individual ratings for YTD classification
         saveData(data);appData=data;
       }
 
