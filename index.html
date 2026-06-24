@@ -1745,16 +1745,20 @@ function processGoogleCSV(input){
       const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
       const tYearInt=parseInt(tYear);
 
-      // Parse DD/MM/YY or DD/MM/YYYY → {day,mon0,year}
+      // Parse YYYY-MM-DD (Apify) or DD/MM/YY or DD/MM/YYYY
       function parseGoogleDate(str){
         if(!str) return null;
-        const parts=str.trim().split('/');
+        str=str.trim();
+        // ISO: "2026-01-15"
+        const iso=str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if(iso) return {mon0:parseInt(iso[2])-1, yr:parseInt(iso[1])};
+        // Legacy: "15/01/26" or "15/01/2026"
+        const parts=str.split('/');
         if(parts.length<3) return null;
-        const day=parseInt(parts[0]);
-        const mon0=parseInt(parts[1])-1; // 0-based month
+        const mon0=parseInt(parts[1])-1;
         let yr=parseInt(parts[2]);
-        if(yr<100) yr+=2000; // YY → YYYY
-        if(isNaN(day)||isNaN(mon0)||isNaN(yr)) return null;
+        if(yr<100) yr+=2000;
+        if(isNaN(mon0)||isNaN(yr)) return null;
         return {mon0, yr};
       }
 
