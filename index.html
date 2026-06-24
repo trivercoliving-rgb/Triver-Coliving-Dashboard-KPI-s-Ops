@@ -346,29 +346,58 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <div class="source-card">
       <div class="source-header">
         <span class="source-name">Airbnb</span>
-        <span class="source-type">Dashboard + reseñas por categoría</span>
+        <span class="source-type">CSV Apify + % categorías (dashboard Airbnb)</span>
       </div>
       <div class="source-body">
-        <div class="field-grid cols2">
+        <!-- Score general: upload CSV Apify -->
+        <div class="upload-zone" id="airbnbZone" onclick="document.getElementById('airbnbFile').click()" ondragover="dragOver(event,'airbnbZone')" ondragleave="dragLeave('airbnbZone')" ondrop="dropFile(event,'airbnb')">
+          <input type="file" id="airbnbFile" accept=".csv" onchange="processAirbnbCSV(this)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Arrastra el CSV de Apify — Airbnb<br>o <strong>haz clic para seleccionar</strong><br><span style="font-size:10px;color:var(--muted)">Columnas requeridas: rating, createdAt</span></div>
+        </div>
+        <div class="upload-status" id="airbnbStatus"></div>
+        <div class="field-grid cols2" style="margin-top:8px">
           <div class="field-wrap">
-            <label>Calidad General mensual (1–5)</label>
-            <input type="number" id="abGeneralScore" min="1" max="5" step="0.01" placeholder="4.84" oninput="refreshPreview()">
-            <span class="hint">Directo del dashboard de Airbnb</span>
+            <label>Score General mensual (1–5)</label>
+            <input type="number" id="abGeneralScore" min="1" max="5" step="0.001" placeholder="—" readonly style="opacity:.7">
+            <span class="hint">Calculado del CSV Apify</span>
           </div>
           <div class="field-wrap">
             <label># Reseñas del mes</label>
-            <input type="number" id="abGeneralReviews" min="0" placeholder="24" oninput="refreshPreview()">
+            <input type="number" id="abGeneralReviews" min="0" placeholder="—" readonly style="opacity:.7">
+            <span class="hint">Calculado del CSV Apify</span>
           </div>
         </div>
         <hr class="src-divider">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">General · Limpieza · Comunicación · Llegada — ingresa reseña por reseña (1–5):</div>
-        <div style="overflow-x:auto">
-          <table class="review-entry-table">
-            <thead><tr><th>#</th><th>General</th><th>Limpieza</th><th>Comunicación</th><th>Llegada</th><th></th></tr></thead>
-            <tbody id="airbnbRows"></tbody>
-          </table>
+        <!-- Estimación staff/limpieza por % 5★ por categoría -->
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          Ingresa el <strong style="color:var(--text)">% de reseñas 5★ por categoría</strong> del dashboard de Airbnb.<br>
+          <span style="font-size:10px">Fórmula: (% × 5) + ((1−%) × 2.8)</span>
         </div>
-        <button class="add-row-btn" onclick="addRow('airbnb')">+ Agregar reseña</button>
+        <div class="field-grid cols3">
+          <div class="field-wrap">
+            <label>% 5★ Limpieza (0–100)</label>
+            <input type="number" id="abPctLimpieza" min="0" max="100" step="0.1" placeholder="87" oninput="recalcAirbnbEstimado();refreshPreview()">
+          </div>
+          <div class="field-wrap">
+            <label>% 5★ Comunicación (0–100)</label>
+            <input type="number" id="abPctComunicacion" min="0" max="100" step="0.1" placeholder="90" oninput="recalcAirbnbEstimado();refreshPreview()">
+          </div>
+          <div class="field-wrap">
+            <label>% 5★ Llegada (0–100)</label>
+            <input type="number" id="abPctLlegada" min="0" max="100" step="0.1" placeholder="88" oninput="recalcAirbnbEstimado();refreshPreview()">
+          </div>
+        </div>
+        <div class="field-grid cols2" style="margin-top:6px">
+          <div class="field-wrap">
+            <label>Limpieza estimada (1–5)</label>
+            <input type="number" id="abEstLimpieza" readonly style="opacity:.7" placeholder="—">
+          </div>
+          <div class="field-wrap">
+            <label>Staff estimado — prom(Comun.+Llegada) (1–5)</label>
+            <input type="number" id="abEstStaff" readonly style="opacity:.7" placeholder="—">
+          </div>
+        </div>
         <div class="calc-result" id="airbnbCalc"></div>
         <hr class="src-divider">
         <div class="acum-box">
@@ -391,13 +420,32 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <div class="source-card">
       <div class="source-header">
         <span class="source-name">Expedia</span>
-        <span class="source-type">Captura reseña por reseña</span>
+        <span class="source-type">CSV Apify (general) + manual (staff/limpieza)</span>
       </div>
       <div class="source-body">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Ingresa cada reseña del mes. Escala 1–5. General se usa para CSAT mensual.</div>
+        <div class="upload-zone" id="expediaZone" onclick="document.getElementById('expediaFile').click()" ondragover="dragOver(event,'expediaZone')" ondragleave="dragLeave('expediaZone')" ondrop="dropFile(event,'expedia')">
+          <input type="file" id="expediaFile" accept=".csv" onchange="processExpediaCSV(this)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Arrastra el CSV de Apify — Expedia<br>o <strong>haz clic para seleccionar</strong><br><span style="font-size:10px;color:var(--muted)">Columnas requeridas: rating, published_date</span></div>
+        </div>
+        <div class="upload-status" id="expediaStatus"></div>
+        <div class="field-grid cols2" style="margin-top:8px">
+          <div class="field-wrap">
+            <label>Score General mensual (2–10)</label>
+            <input type="number" id="exGeneralScore10" min="1" max="10" step="0.01" placeholder="—" readonly style="opacity:.7">
+            <span class="hint">Calculado del CSV Apify</span>
+          </div>
+          <div class="field-wrap">
+            <label># Reseñas del mes</label>
+            <input type="number" id="exGeneralReviews" min="0" placeholder="—" readonly style="opacity:.7">
+            <span class="hint">Calculado del CSV Apify</span>
+          </div>
+        </div>
+        <hr class="src-divider">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Staff y Limpieza: ingresa reseña por reseña (escala 1–10). Staff es opcional.</div>
         <div style="overflow-x:auto">
           <table class="review-entry-table">
-            <thead><tr><th>#</th><th>General</th><th>Staff</th><th>Limpieza</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Staff (1–10)</th><th>Limpieza (1–10)</th><th></th></tr></thead>
             <tbody id="expediaRows"></tbody>
           </table>
         </div>
@@ -408,8 +456,8 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           <div class="acum-title">Acumulado histórico (score publicado en Expedia)</div>
           <div class="field-grid cols2">
             <div class="field-wrap">
-              <label>Score acumulado (1–5)</label>
-              <input type="number" id="exAcumScore" min="1" max="5" step="0.01" placeholder="4.60" oninput="refreshPreview()">
+              <label>Score acumulado (2–10)</label>
+              <input type="number" id="exAcumScore" min="1" max="10" step="0.01" placeholder="8.8" oninput="refreshPreview()">
             </div>
             <div class="field-wrap">
               <label># Total reseñas acumuladas</label>
@@ -664,8 +712,11 @@ const HIST_BASE = { csat:4.42, staff:4.58, cleanliness:4.55 };
 const SEED = [
   { mes:'Enero 2026',
     booking:{ reviews:[], computed:null, rc:0, acum:{ score:null, reviews:0 } },
-    airbnb:{ general_score:null, general_reviews:0, rows:[], acum:{ score:null, reviews:0 } },
-    expedia:{ rows:[], acum:{ score:null, reviews:0 } },
+    airbnb:{ general_score:null, general_reviews:0,
+             pct_limpieza:null, pct_comunicacion:null, pct_llegada:null,
+             est_limpieza:null, est_staff:null,
+             rows:[], acum:{ score:null, reviews:0 } },
+    expedia:{ general_score10:null, general_reviews:0, rows:[], acum:{ score:null, reviews:0 } },
     google:{ score:null, reviews:0, acum:{ score:null, reviews:0 } },
     hw:{ score:null, reviews:0, acum:{ score:null, reviews:0 } },
     hosts:{ response_time:null, qa_completion:null, aud_sofia:null, aud_andrea:null },
@@ -720,21 +771,37 @@ function getKPIs(m){
   // ── AIRBNB
   const ab=m.airbnb;
   const abOverall=n(ab.general_score); const abCount=ni(ab.general_reviews);
-  const abRows=ab.rows||[];
-  const abComun=rowAvg(abRows,'comunicacion');
-  const abLleg=rowAvg(abRows,'llegada');
-  const abClean=rowAvg(abRows,'limpieza');
-  const abStaff=(abComun!=null&&abLleg!=null)?(abComun+abLleg)/2:(abComun||abLleg);
+  // Staff estimado = promedio(Comunicación estimada, Llegada estimada)
+  // Limpieza estimada = por su propio % 5★
+  // Fórmula por categoría: (pct/100 * 5) + ((1 - pct/100) * 2.8)
+  function estScore(pct){ if(pct==null)return null; const p=pct/100; return p*5+(1-p)*2.8; }
+  const abEstLimpieza=estScore(n(ab.pct_limpieza));
+  const abEstComun=estScore(n(ab.pct_comunicacion));
+  const abEstLlegada=estScore(n(ab.pct_llegada));
+  const abStaff=(abEstComun!=null&&abEstLlegada!=null)?(abEstComun+abEstLlegada)/2
+               :(abEstComun!=null?abEstComun:(abEstLlegada!=null?abEstLlegada:null));
+  const abClean=abEstLimpieza;
   let abAcum=null,abAcumN=0;
   if(ab.acum){abAcum=n(ab.acum.score);abAcumN=ni(ab.acum.reviews);}
 
-  // ── EXPEDIA
+  // ── EXPEDIA (general score on 2–10 scale → normalise to /5 for CSAT)
   const ex=m.expedia; const exRows=ex.rows||[];
-  const exStaff=rowAvg(exRows,'staff');
-  const exClean=rowAvg(exRows,'limpieza');
-  const exCount=exRows.length;
+  const exGeneral10=n(ex.general_score10);
+  const exGeneral=exGeneral10!=null?exGeneral10/2:null;
+  const exGeneralCount=ni(ex.general_reviews)||exRows.length;
+  // Staff/clean from manual rows (1–10 each) → /5
+  const exStaff10=rowAvg(exRows,'staff');
+  const exClean10=rowAvg(exRows,'limpieza');
+  const exStaff=exStaff10!=null?exStaff10/2:null;
+  const exClean=exClean10!=null?exClean10/2:null;
+  const exCount=exGeneralCount||exRows.length;
   let exAcum=null,exAcumN=0;
-  if(ex.acum){exAcum=n(ex.acum.score);exAcumN=ni(ex.acum.reviews);}
+  if(ex.acum){
+    const rawAcum=n(ex.acum.score);
+    // Stored /10; normalise to /5 for CSAT weighted average
+    exAcum=rawAcum!=null?(rawAcum>5?rawAcum/2:rawAcum):null;
+    exAcumN=ni(ex.acum.reviews);
+  }
 
   // ── GOOGLE
   const go=m.google||{};
@@ -752,7 +819,7 @@ function getKPIs(m){
   const csat=wavg([
     {score:abOverall,count:abCount},
     {score:bkOverall,count:bkCount},
-    {score:exRows.length>0?rowAvg(exRows,'overall'):null,count:exCount},
+    {score:exGeneral,count:exCount},
     {score:gScore,count:gCount},
     {score:hwScore,count:hwCount}
   ]);
@@ -766,18 +833,18 @@ function getKPIs(m){
     {score:hwAcum,count:hwAcumN}
   ]);
 
-  // ── STAFF ponderado: Airbnb(comun+lleg), Booking(staff), Expedia(staff)
+  // ── STAFF ponderado: Airbnb(est_staff), Booking(staff), Expedia(staff manual)
   const staff=wavg([
-    {score:abStaff,count:abRows.length||abCount},
+    {score:abStaff,count:abCount},
     {score:bkStaff,count:bkCount},
-    {score:exStaff,count:exCount}
+    {score:exStaff,count:exRows.length}
   ]);
 
-  // ── CLEANLINESS ponderado
+  // ── CLEANLINESS ponderado: Airbnb(est_limpieza), Booking(clean), Expedia(clean manual)
   const cleanliness=wavg([
-    {score:abClean,count:abRows.length||abCount},
+    {score:abClean,count:abCount},
     {score:bkClean,count:bkCount},
-    {score:exClean,count:exCount}
+    {score:exClean,count:exRows.length}
   ]);
 
   // ── Audit share
@@ -792,7 +859,7 @@ function getKPIs(m){
     sources:{
       airbnb:  {overall:abOverall,count:abCount,staff:abStaff,cleanliness:abClean,acum:abAcum},
       booking: {overall:bkOverall,count:bkCount,staff:bkStaff,cleanliness:bkClean,acum:bkAcum},
-      expedia: {overall:rowAvg(exRows,'overall'),count:exCount,staff:exStaff,cleanliness:exClean,acum:exAcum},
+      expedia: {overall:exGeneral,count:exCount,staff:exStaff,cleanliness:exClean,acum:exAcum},
       google:  {overall:gScore,count:gCount,acum:gAcum},
       hw:      {overall:hwScore,count:hwCount,acum:hwAcum}
     },
@@ -1176,27 +1243,29 @@ function getYTDCounts(mesData){
   const add=(obj,cls)=>{ if(cls){obj[cls]++;obj.total++;} };
   const bk=empty(),ab=empty(),ex=empty(),go=empty(),hw=empty();
 
-  // Booking — desde CSV: campo 'Review score' escala 1-10
+  // Booking — CSV rows: 'Review score' escala 1-10
   ((mesData.booking&&mesData.booking.reviews)||[]).forEach(r=>{
     add(bk, classify10(r['Review score']));
   });
 
-  // Airbnb — desde rows.general (1-5, campo nuevo)
-  ((mesData.airbnb&&mesData.airbnb.rows)||[]).forEach(r=>{
-    add(ab, classify5(r.general));
-  });
+  // Airbnb — general_score (1–5) weighted by general_reviews
+  if(mesData.airbnb&&mesData.airbnb.general_score!=null&&mesData.airbnb.general_reviews>0){
+    const cls=classify5(mesData.airbnb.general_score);
+    if(cls){ ab[cls]+=mesData.airbnb.general_reviews; ab.total+=mesData.airbnb.general_reviews; }
+  }
 
-  // Expedia — desde rows.overall (1-5)
-  ((mesData.expedia&&mesData.expedia.rows)||[]).forEach(r=>{
-    add(ex, classify5(r.overall));
-  });
+  // Expedia — general_score10 (2–10) weighted by general_reviews
+  if(mesData.expedia&&mesData.expedia.general_score10!=null&&mesData.expedia.general_reviews>0){
+    const cls=classify10(mesData.expedia.general_score10);
+    if(cls){ ex[cls]+=mesData.expedia.general_reviews; ex.total+=mesData.expedia.general_reviews; }
+  }
 
-  // Google — desde rows.score (1-5, manual o CSV)
+  // Google — rows.score (1–5)
   ((mesData.google&&mesData.google.rows)||[]).forEach(r=>{
     add(go, classify5(r.score));
   });
 
-  // HostelWorld — desde rows.score (1-10)
+  // HostelWorld — rows.score (1–10)
   ((mesData.hw&&mesData.hw.rows)||[]).forEach(r=>{
     add(hw, classify10(r.score));
   });
@@ -1414,11 +1483,21 @@ function updateCaptureTab(){
   // Airbnb
   setVal('abGeneralScore', md.airbnb.general_score!=null?md.airbnb.general_score:'');
   setVal('abGeneralReviews', md.airbnb.general_reviews||'');
-  buildRows('airbnb', md.airbnb.rows||[]);
+  setVal('abPctLimpieza', md.airbnb.pct_limpieza!=null?md.airbnb.pct_limpieza:'');
+  setVal('abPctComunicacion', md.airbnb.pct_comunicacion!=null?md.airbnb.pct_comunicacion:'');
+  setVal('abPctLlegada', md.airbnb.pct_llegada!=null?md.airbnb.pct_llegada:'');
+  setVal('abEstLimpieza', md.airbnb.est_limpieza!=null?md.airbnb.est_limpieza:'');
+  setVal('abEstStaff', md.airbnb.est_staff!=null?md.airbnb.est_staff:'');
+  if(md.airbnb.general_reviews>0) showStatus('airbnbStatus',`✓ ${md.airbnb.general_reviews} reseñas · Score ${md.airbnb.general_score!=null?md.airbnb.general_score.toFixed(3):'—'}/5`,true);
+  else document.getElementById('airbnbStatus').style.display='none';
   setVal('abAcumScore', md.airbnb.acum&&md.airbnb.acum.score!=null?md.airbnb.acum.score:'');
   setVal('abAcumReviews', md.airbnb.acum&&md.airbnb.acum.reviews?md.airbnb.acum.reviews:'');
 
   // Expedia
+  setVal('exGeneralScore10', md.expedia.general_score10!=null?md.expedia.general_score10:'');
+  setVal('exGeneralReviews', md.expedia.general_reviews||'');
+  if(md.expedia.general_reviews>0) showStatus('expediaStatus',`✓ ${md.expedia.general_reviews} reseñas · Score ${md.expedia.general_score10!=null?md.expedia.general_score10.toFixed(2):'—'}/10`,true);
+  else document.getElementById('expediaStatus').style.display='none';
   buildRows('expedia', md.expedia.rows||[]);
   setVal('exAcumScore', md.expedia.acum&&md.expedia.acum.score!=null?md.expedia.acum.score:'');
   setVal('exAcumReviews', md.expedia.acum&&md.expedia.acum.reviews?md.expedia.acum.reviews:'');
@@ -1470,16 +1549,17 @@ function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v;}
 
 // ── ROW BUILDERS ──
 const ROW_CONFIGS={
-  airbnb:{ fields:['general','limpieza','comunicacion','llegada'], labels:['General','Limpieza','Comunicación','Llegada'], max:5 },
-  expedia:{ fields:['overall','staff','limpieza'], labels:['General (1–5)','Staff (1–5)','Limpieza (1–5)'], max:5 },
+  expedia:{ fields:['staff','limpieza'], labels:['Staff (1–10)','Limpieza (1–10)'], max:10 },
   google:{ fields:['score'], labels:['Calificación'], max:5 },
   hw:{ fields:['score'], labels:['Calificación'], max:10 }
 };
 function buildRows(type, rows){
+  const cfg=ROW_CONFIGS[type];
+  if(!cfg)return;
   const tbody=document.getElementById(type+'Rows');
   if(!tbody)return;
   tbody.innerHTML='';
-  const startBlank=(type==='airbnb'||type==='expedia'); // google/hw start empty until user adds
+  const startBlank=(type==='expedia');
   if(rows.length===0){if(startBlank)addRow(type);return;}
   rows.forEach(r=>addRow(type,r));
   refreshRowCalc(type);
@@ -1530,17 +1610,26 @@ function refreshAuditShare(){
 function refreshPreview(){
   const md=appData.meses.find(m=>m.mes===currentMes); if(!md)return;
   // Build temp object from current form
-  const abRows=getRows('airbnb');
   const exRows=getRows('expedia');
   const tmp={
     booking: md.booking,
     airbnb:{
-      general_score: parseFloat(document.getElementById('abGeneralScore').value)||null,
-      general_reviews: parseInt(document.getElementById('abGeneralReviews').value)||0,
-      rows: abRows,
+      general_score:  parseFloat(document.getElementById('abGeneralScore').value)||null,
+      general_reviews:parseInt(document.getElementById('abGeneralReviews').value)||0,
+      pct_limpieza:   parseFloat(document.getElementById('abPctLimpieza').value)||null,
+      pct_comunicacion:parseFloat(document.getElementById('abPctComunicacion').value)||null,
+      pct_llegada:    parseFloat(document.getElementById('abPctLlegada').value)||null,
+      est_limpieza:   parseFloat(document.getElementById('abEstLimpieza').value)||null,
+      est_staff:      parseFloat(document.getElementById('abEstStaff').value)||null,
+      rows:[],
       acum:{ score:parseFloat(document.getElementById('abAcumScore').value)||null, reviews:parseInt(document.getElementById('abAcumReviews').value)||0 }
     },
-    expedia:{ rows:exRows, acum:{ score:parseFloat(document.getElementById('exAcumScore').value)||null, reviews:parseInt(document.getElementById('exAcumReviews').value)||0 } },
+    expedia:{
+      general_score10:parseFloat(document.getElementById('exGeneralScore10').value)||null,
+      general_reviews:parseInt(document.getElementById('exGeneralReviews').value)||0,
+      rows:exRows,
+      acum:{ score:parseFloat(document.getElementById('exAcumScore').value)||null, reviews:parseInt(document.getElementById('exAcumReviews').value)||0 }
+    },
     google:{ score:parseFloat(document.getElementById('googleScore').value)||null, reviews:parseInt(document.getElementById('googleReviews').value)||0,
              acum:{ score:parseFloat(document.getElementById('gAcumScore').value)||null, reviews:parseInt(document.getElementById('gAcumReviews').value)||0 } },
     hw:{ score:parseFloat(document.getElementById('hwScore').value)||null, reviews:parseInt(document.getElementById('hwReviews').value)||0,
@@ -1765,10 +1854,17 @@ function saveAllCapture(){
   // Airbnb
   m.airbnb.general_score=parseFloat(document.getElementById('abGeneralScore').value)||null;
   m.airbnb.general_reviews=parseInt(document.getElementById('abGeneralReviews').value)||0;
-  m.airbnb.rows=getRows('airbnb').filter(r=>Object.values(r).some(v=>v!=null));
+  m.airbnb.pct_limpieza=parseFloat(document.getElementById('abPctLimpieza').value)||null;
+  m.airbnb.pct_comunicacion=parseFloat(document.getElementById('abPctComunicacion').value)||null;
+  m.airbnb.pct_llegada=parseFloat(document.getElementById('abPctLlegada').value)||null;
+  m.airbnb.est_limpieza=parseFloat(document.getElementById('abEstLimpieza').value)||null;
+  m.airbnb.est_staff=parseFloat(document.getElementById('abEstStaff').value)||null;
+  m.airbnb.rows=[];
   m.airbnb.acum={ score:parseFloat(document.getElementById('abAcumScore').value)||null, reviews:parseInt(document.getElementById('abAcumReviews').value)||0 };
 
   // Expedia
+  m.expedia.general_score10=parseFloat(document.getElementById('exGeneralScore10').value)||null;
+  m.expedia.general_reviews=parseInt(document.getElementById('exGeneralReviews').value)||0;
   m.expedia.rows=getRows('expedia').filter(r=>Object.values(r).some(v=>v!=null));
   m.expedia.acum={ score:parseFloat(document.getElementById('exAcumScore').value)||null, reviews:parseInt(document.getElementById('exAcumReviews').value)||0 };
 
@@ -1822,8 +1918,11 @@ function createNewMonth(){
   const data=loadData();
   data.meses.push({ mes,
     booking:{reviews:[],computed:null,rc:0,acum:{score:null,reviews:0}},
-    airbnb:{general_score:null,general_reviews:0,rows:[],acum:{score:null,reviews:0}},
-    expedia:{rows:[],acum:{score:null,reviews:0}},
+    airbnb:{general_score:null,general_reviews:0,
+            pct_limpieza:null,pct_comunicacion:null,pct_llegada:null,
+            est_limpieza:null,est_staff:null,
+            rows:[],acum:{score:null,reviews:0}},
+    expedia:{general_score10:null,general_reviews:0,rows:[],acum:{score:null,reviews:0}},
     google:{score:null,reviews:0,rows:[],acum:{score:null,reviews:0}},
     hw:{score:null,reviews:0,rows:[],acum:{score:null,reviews:0}},
     hosts:{response_time:null,qa_completion:null,aud_sofia:null,aud_andrea:null,aud_total:null},
@@ -1869,11 +1968,199 @@ function dropFile(e,type){
     const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
     processQACSV(input);dragLeave('qaZone');return;
   }
+  if(type==='airbnb'){
+    const input=document.getElementById('airbnbFile');
+    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+    processAirbnbCSV(input);dragLeave('airbnbZone');return;
+  }
+  if(type==='expedia'){
+    const input=document.getElementById('expediaFile');
+    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+    processExpediaCSV(input);dragLeave('expediaZone');return;
+  }
   const id=type==='booking'?'bookingFile':'googleFile';
   const input=document.getElementById(id);
   const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
   type==='booking'?processBookingCSV(input):processGoogleCSV(input);
   dragLeave(type==='booking'?'bookingZone':'googleZone');
+}
+
+// ── AIRBNB CSV PROCESSOR (Apify scraper)
+// Columns used: rating (1–5), createdAt (ISO: "2026-06-23T19:51:44Z")
+function processAirbnbCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const allRows=parseCSVFull(e.target.result);
+      if(allRows.length<2){showStatus('airbnbStatus','Archivo vacío o ilegible.',false);return;}
+
+      const headers=allRows[0].map(h=>h.trim());
+      const rIdx=headers.findIndex(h=>/^rating$/i.test(h));
+      const dIdx=headers.findIndex(h=>/^createdat$/i.test(h));
+
+      if(rIdx<0){showStatus('airbnbStatus',`Columna "rating" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
+      if(dIdx<0){showStatus('airbnbStatus',`Columna "createdAt" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
+
+      const [tMon,tYear]=currentMes.split(' ');
+      const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
+      const tYearInt=parseInt(tYear);
+
+      const monthRatings=[];
+      let totalValid=0;
+
+      for(let i=1;i<allRows.length;i++){
+        const vals=allRows[i];
+        if(vals.length<2) continue;
+        const rating=parseFloat(vals[rIdx]);
+        if(isNaN(rating)||rating<=0||rating>5) continue;
+        totalValid++;
+
+        // ISO format: "2026-06-23T19:51:44Z"
+        const dateStr=(vals[dIdx]||'').trim();
+        const d=new Date(dateStr);
+        if(isNaN(d)) continue;
+        if(d.getUTCMonth()===tMonIdx && d.getUTCFullYear()===tYearInt){
+          monthRatings.push(rating);
+        }
+      }
+
+      if(monthRatings.length===0){
+        showStatus('airbnbStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid}`,false);return;
+      }
+
+      const avg=monthRatings.reduce((a,b)=>a+b,0)/monthRatings.length;
+      const count=monthRatings.length;
+
+      document.getElementById('abGeneralScore').value=avg.toFixed(3);
+      document.getElementById('abGeneralReviews').value=count;
+
+      const data=loadData();
+      const idx=data.meses.findIndex(m=>m.mes===currentMes);
+      if(idx>=0){
+        data.meses[idx].airbnb.general_score=parseFloat(avg.toFixed(3));
+        data.meses[idx].airbnb.general_reviews=count;
+        saveData(data);appData=data;
+      }
+
+      showStatus('airbnbStatus',`✓ ${count} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(3)}/5`,true);
+      refreshPreview();renderDashboard();
+    }catch(err){showStatus('airbnbStatus','Error: '+err.message,false);}
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+// ── EXPEDIA CSV PROCESSOR (Apify scraper)
+// Columns used: rating (2–10), published_date (mixed: "20 abr. 2026" or ISO "2026-02-14")
+function processExpediaCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const allRows=parseCSVFull(e.target.result);
+      if(allRows.length<2){showStatus('expediaStatus','Archivo vacío o ilegible.',false);return;}
+
+      const headers=allRows[0].map(h=>h.trim());
+      const rIdx=headers.findIndex(h=>/^rating$/i.test(h));
+      const dIdx=headers.findIndex(h=>/^published_date$/i.test(h));
+
+      if(rIdx<0){showStatus('expediaStatus',`Columna "rating" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
+      if(dIdx<0){showStatus('expediaStatus',`Columna "published_date" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
+
+      const [tMon,tYear]=currentMes.split(' ');
+      const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
+      const tYearInt=parseInt(tYear);
+
+      // Spanish month abbreviations (Apify Expedia format)
+      const MON_ES={'ene':0,'feb':1,'mar':2,'abr':3,'may':4,'jun':5,
+                    'jul':6,'ago':7,'sep':8,'oct':9,'nov':10,'dic':11};
+
+      function parseExpDate(str){
+        str=(str||'').trim();
+        // ISO: "2026-02-14"
+        const iso=str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if(iso) return {yr:parseInt(iso[1]), mo:parseInt(iso[2])-1};
+        // Spanish: "20 abr. 2026" or "20 abr 2026"
+        const sp=str.match(/^(\d{1,2})\s+([a-záéíóú]+)\.?\s+(\d{4})$/i);
+        if(sp){
+          const mo=MON_ES[sp[2].toLowerCase().substring(0,3)];
+          return mo!==undefined?{yr:parseInt(sp[3]), mo}:null;
+        }
+        return null;
+      }
+
+      const monthRatings=[];
+      let totalValid=0;
+
+      for(let i=1;i<allRows.length;i++){
+        const vals=allRows[i];
+        if(vals.length<2) continue;
+        const rating=parseFloat(vals[rIdx]);
+        if(isNaN(rating)||rating<=0) continue;
+        totalValid++;
+
+        const parsed=parseExpDate(vals[dIdx]);
+        if(parsed && parsed.mo===tMonIdx && parsed.yr===tYearInt){
+          monthRatings.push(rating);
+        }
+      }
+
+      if(monthRatings.length===0){
+        showStatus('expediaStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid}`,false);return;
+      }
+
+      const avg=monthRatings.reduce((a,b)=>a+b,0)/monthRatings.length;
+      const count=monthRatings.length;
+
+      document.getElementById('exGeneralScore10').value=avg.toFixed(2);
+      document.getElementById('exGeneralReviews').value=count;
+
+      const data=loadData();
+      const idx=data.meses.findIndex(m=>m.mes===currentMes);
+      if(idx>=0){
+        data.meses[idx].expedia.general_score10=parseFloat(avg.toFixed(2));
+        data.meses[idx].expedia.general_reviews=count;
+        saveData(data);appData=data;
+      }
+
+      showStatus('expediaStatus',`✓ ${count} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(2)}/10`,true);
+      refreshPreview();renderDashboard();
+    }catch(err){showStatus('expediaStatus','Error: '+err.message,false);}
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+// ── recalcAirbnbEstimado: fired when any pct5star field changes
+function recalcAirbnbEstimado(){
+  function est(pct){ if(pct===null||pct===undefined||pct==='')return null; const p=parseFloat(pct)/100; if(isNaN(p))return null; return p*5+(1-p)*2.8; }
+  const pctL=document.getElementById('abPctLimpieza').value;
+  const pctC=document.getElementById('abPctComunicacion').value;
+  const pctLL=document.getElementById('abPctLlegada').value;
+  const estL=est(pctL);
+  const estC=est(pctC);
+  const estLL=est(pctLL);
+  const estStaff=(estC!=null&&estLL!=null)?(estC+estLL)/2:(estC!=null?estC:(estLL!=null?estLL:null));
+
+  document.getElementById('abEstLimpieza').value=estL!=null?estL.toFixed(3):'';
+  document.getElementById('abEstStaff').value=estStaff!=null?estStaff.toFixed(3):'';
+
+  const parts=[];
+  if(estL!=null) parts.push(`Limpieza: <b>${estL.toFixed(3)}/5</b>`);
+  if(estC!=null) parts.push(`Comunicación: <b>${estC.toFixed(3)}/5</b>`);
+  if(estLL!=null) parts.push(`Llegada: <b>${estLL.toFixed(3)}/5</b>`);
+  if(estStaff!=null) parts.push(`→ Staff: <b style="color:var(--green)">${estStaff.toFixed(3)}/5</b>`);
+  document.getElementById('airbnbCalc').innerHTML=parts.join(' · ');
+
+  const dataNew=loadData();
+  const idx=dataNew.meses.findIndex(m=>m.mes===currentMes);
+  if(idx>=0){
+    dataNew.meses[idx].airbnb.pct_limpieza=pctL!==''?parseFloat(pctL):null;
+    dataNew.meses[idx].airbnb.pct_comunicacion=pctC!==''?parseFloat(pctC):null;
+    dataNew.meses[idx].airbnb.pct_llegada=pctLL!==''?parseFloat(pctLL):null;
+    dataNew.meses[idx].airbnb.est_limpieza=estL!=null?parseFloat(estL.toFixed(3)):null;
+    dataNew.meses[idx].airbnb.est_staff=estStaff!=null?parseFloat(estStaff.toFixed(3)):null;
+    saveData(dataNew);appData=dataNew;
+  }
 }
 let _tt=null;
 function showToast(msg,type='ok'){
