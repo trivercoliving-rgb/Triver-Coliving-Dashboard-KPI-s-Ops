@@ -2014,49 +2014,50 @@ function processAirbnbCSV(input){
       if(rIdx<0){showStatus('airbnbStatus',`Columna "rating" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
       if(dIdx<0){showStatus('airbnbStatus',`Columna "createdAt" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
 
-      const [tMon,tYear]=currentMes.split(' ');
-      const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
-      const tYearInt=parseInt(tYear);
-
-      const monthRatings=[];
+      // Build a map: "YYYY-M" → [ratings] for every row in the CSV
+      const byMonth={};
       let totalValid=0;
-
       for(let i=1;i<allRows.length;i++){
         const vals=allRows[i];
         if(vals.length<2) continue;
         const rating=parseFloat(vals[rIdx]);
         if(isNaN(rating)||rating<=0||rating>5) continue;
         totalValid++;
-
-        // ISO format: "2026-06-23T19:51:44Z"
-        const dateStr=(vals[dIdx]||'').trim();
-        const d=new Date(dateStr);
+        const d=new Date((vals[dIdx]||'').trim());
         if(isNaN(d)) continue;
-        if(d.getUTCMonth()===tMonIdx && d.getUTCFullYear()===tYearInt){
-          monthRatings.push(rating);
-        }
+        const key=d.getUTCFullYear()+'-'+d.getUTCMonth(); // "2026-5" = June
+        if(!byMonth[key]) byMonth[key]=[];
+        byMonth[key].push(rating);
       }
 
-      if(monthRatings.length===0){
-        showStatus('airbnbStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid}`,false);return;
-      }
-
-      const avg=monthRatings.reduce((a,b)=>a+b,0)/monthRatings.length;
-      const count=monthRatings.length;
-
-      document.getElementById('abGeneralScore').value=avg.toFixed(3);
-      document.getElementById('abGeneralReviews').value=count;
-
+      // Update rating_list for every saved month that has data in the CSV
       const data=loadData();
-      const idx=data.meses.findIndex(m=>m.mes===currentMes);
-      if(idx>=0){
-        data.meses[idx].airbnb.general_score=parseFloat(avg.toFixed(3));
-        data.meses[idx].airbnb.general_reviews=count;
-        data.meses[idx].airbnb.rating_list=monthRatings; // individual ratings for YTD classification
-        saveData(data);appData=data;
-      }
+      let updatedMonths=0;
+      data.meses.forEach(m=>{
+        const [mMon,mYr]=m.mes.split(' ');
+        const key=parseInt(mYr)+'-'+MONTHS_ES.indexOf(mMon);
+        const list=byMonth[key];
+        if(!list||list.length===0) return;
+        const avg=list.reduce((a,b)=>a+b,0)/list.length;
+        m.airbnb.general_score=parseFloat(avg.toFixed(3));
+        m.airbnb.general_reviews=list.length;
+        m.airbnb.rating_list=list;
+        updatedMonths++;
+      });
+      saveData(data);appData=data;
 
-      showStatus('airbnbStatus',`✓ ${count} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(3)}/5`,true);
+      // Refresh UI for current month
+      const [tMon,tYear]=currentMes.split(' ');
+      const curKey=parseInt(tYear)+'-'+MONTHS_ES.indexOf(tMon);
+      const curList=byMonth[curKey]||[];
+      if(curList.length>0){
+        const avg=curList.reduce((a,b)=>a+b,0)/curList.length;
+        document.getElementById('abGeneralScore').value=avg.toFixed(3);
+        document.getElementById('abGeneralReviews').value=curList.length;
+        showStatus('airbnbStatus',`✓ ${curList.length} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(3)}/5 · ${updatedMonths} meses actualizados`,true);
+      } else {
+        showStatus('airbnbStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid} · ${updatedMonths} meses actualizados`,curList.length>0);
+      }
       refreshPreview();renderDashboard();
     }catch(err){showStatus('airbnbStatus','Error: '+err.message,false);}
   };
@@ -2080,20 +2081,13 @@ function processExpediaCSV(input){
       if(rIdx<0){showStatus('expediaStatus',`Columna "rating" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
       if(dIdx<0){showStatus('expediaStatus',`Columna "published_date" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
 
-      const [tMon,tYear]=currentMes.split(' ');
-      const tMonIdx=MONTHS_ES.indexOf(tMon); // 0-based
-      const tYearInt=parseInt(tYear);
-
-      // Spanish month abbreviations (Apify Expedia format)
       const MON_ES={'ene':0,'feb':1,'mar':2,'abr':3,'may':4,'jun':5,
                     'jul':6,'ago':7,'sep':8,'oct':9,'nov':10,'dic':11};
 
       function parseExpDate(str){
         str=(str||'').trim();
-        // ISO: "2026-02-14"
         const iso=str.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if(iso) return {yr:parseInt(iso[1]), mo:parseInt(iso[2])-1};
-        // Spanish: "20 abr. 2026" or "20 abr 2026"
         const sp=str.match(/^(\d{1,2})\s+([a-záéíóú]+)\.?\s+(\d{4})$/i);
         if(sp){
           const mo=MON_ES[sp[2].toLowerCase().substring(0,3)];
@@ -2102,42 +2096,50 @@ function processExpediaCSV(input){
         return null;
       }
 
-      const monthRatings=[];
+      // Build a map: "YYYY-M" → [ratings] for every row in the CSV
+      const byMonth={};
       let totalValid=0;
-
       for(let i=1;i<allRows.length;i++){
         const vals=allRows[i];
         if(vals.length<2) continue;
         const rating=parseFloat(vals[rIdx]);
         if(isNaN(rating)||rating<=0) continue;
         totalValid++;
-
         const parsed=parseExpDate(vals[dIdx]);
-        if(parsed && parsed.mo===tMonIdx && parsed.yr===tYearInt){
-          monthRatings.push(rating);
-        }
+        if(!parsed) continue;
+        const key=parsed.yr+'-'+parsed.mo;
+        if(!byMonth[key]) byMonth[key]=[];
+        byMonth[key].push(rating);
       }
 
-      if(monthRatings.length===0){
-        showStatus('expediaStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid}`,false);return;
-      }
-
-      const avg=monthRatings.reduce((a,b)=>a+b,0)/monthRatings.length;
-      const count=monthRatings.length;
-
-      document.getElementById('exGeneralScore10').value=avg.toFixed(2);
-      document.getElementById('exGeneralReviews').value=count;
-
+      // Update rating_list for every saved month that has data in the CSV
       const data=loadData();
-      const idx=data.meses.findIndex(m=>m.mes===currentMes);
-      if(idx>=0){
-        data.meses[idx].expedia.general_score10=parseFloat(avg.toFixed(2));
-        data.meses[idx].expedia.general_reviews=count;
-        data.meses[idx].expedia.rating_list=monthRatings; // individual ratings for YTD classification
-        saveData(data);appData=data;
-      }
+      let updatedMonths=0;
+      data.meses.forEach(m=>{
+        const [mMon,mYr]=m.mes.split(' ');
+        const key=parseInt(mYr)+'-'+MONTHS_ES.indexOf(mMon);
+        const list=byMonth[key];
+        if(!list||list.length===0) return;
+        const avg=list.reduce((a,b)=>a+b,0)/list.length;
+        m.expedia.general_score10=parseFloat(avg.toFixed(2));
+        m.expedia.general_reviews=list.length;
+        m.expedia.rating_list=list;
+        updatedMonths++;
+      });
+      saveData(data);appData=data;
 
-      showStatus('expediaStatus',`✓ ${count} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(2)}/10`,true);
+      // Refresh UI for current month
+      const [tMon,tYear]=currentMes.split(' ');
+      const curKey=parseInt(tYear)+'-'+MONTHS_ES.indexOf(tMon);
+      const curList=byMonth[curKey]||[];
+      if(curList.length>0){
+        const avg=curList.reduce((a,b)=>a+b,0)/curList.length;
+        document.getElementById('exGeneralScore10').value=avg.toFixed(2);
+        document.getElementById('exGeneralReviews').value=curList.length;
+        showStatus('expediaStatus',`✓ ${curList.length} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(2)}/10 · ${updatedMonths} meses actualizados`,true);
+      } else {
+        showStatus('expediaStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid} · ${updatedMonths} meses actualizados`,false);
+      }
       refreshPreview();renderDashboard();
     }catch(err){showStatus('expediaStatus','Error: '+err.message,false);}
   };
