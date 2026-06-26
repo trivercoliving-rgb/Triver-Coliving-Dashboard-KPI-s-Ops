@@ -169,7 +169,7 @@ main{padding:22px 28px 60px;max-width:1300px;margin:0 auto}
 }
 .csat-big{font-size:52px;font-weight:800;letter-spacing:-.04em;line-height:1;color:#fff}
 .csat-info{flex:1;min-width:160px}
-.csat-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px}
+.csat-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--triver-orange);margin-bottom:4px}
 
 /* ══ BREAKDOWN TABLE redesigned ══ */
 .breakdown{
@@ -1145,9 +1145,9 @@ function renderDashboard(){
   document.getElementById('csatBadge').innerHTML=`<span class="badge ${cS}"><span class="dot ${cS}"></span>${cS==='green'?'Cumple meta ≥ 4.5':cS==='yellow'?'Por debajo de meta':'Bajo — requiere atención'}</span>`;
   const cD=csat!=null?csat-csatBase:null;
   document.getElementById('csatInfo').innerHTML=`
-    <div style="font-size:11px;color:var(--muted);margin-bottom:3px">vs. Acumulado histórico ponderado ${csatAcum!=null?'('+csatAcum.toFixed(2)+')':'(base '+HIST_BASE.csat.toFixed(2)+')'}</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.8);margin-bottom:3px">vs. Acumulado histórico ponderado ${csatAcum!=null?'('+csatAcum.toFixed(2)+')':'(base '+HIST_BASE.csat.toFixed(2)+')'}</div>
     ${cD!=null?`<div class="delta ${cD>=0?'up':'down'}">${cD>=0?'▲':'▼'} ${Math.abs(cD).toFixed(2)} pts</div>`:''}
-    <div style="font-size:10px;color:var(--muted);margin-top:8px">Meta: ≥ 4.50 / 5.00 · Ponderado por volumen de reseñas</div>`;
+    <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:8px">Meta: ≥ 4.50 / 5.00 · Ponderado por volumen de reseñas</div>`;
 
   // Breakdown OTA
   const rows=[
