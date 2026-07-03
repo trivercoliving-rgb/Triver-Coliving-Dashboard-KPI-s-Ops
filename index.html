@@ -431,6 +431,13 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 }
 @media(max-width:1100px){.totem-capture{display:none}}
 
+.btn-export-pdf{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--triver-navy);color:#fff;border:none;border-radius:6px;
+  padding:5px 10px;cursor:pointer;margin-left:auto;flex-shrink:0;
+}
+.btn-export-pdf:hover{background:var(--triver-teal)}
+
 /* ══ ACUM TABLE — Score acumulado por canal ══ */
 .acum-triver-row td{
   background:linear-gradient(90deg,rgba(249,160,88,.12) 0%,rgba(249,160,88,.04) 100%) !important;
@@ -503,7 +510,9 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   </div>
   <div class="breakdown" id="csatBreakdown"></div>
 
-  <div class="section-label" style="margin-top:28px">Score Acumulado por Canal</div>
+  <div class="section-label" style="margin-top:28px">Score Acumulado por Canal
+    <button onclick="exportTablasPDF()" class="btn-export-pdf">⬇ Exportar tablas PDF</button>
+  </div>
   <div class="breakdown" id="acumTable"></div>
 
   <div class="section-label">KPIs — Hosts</div>
@@ -1624,6 +1633,130 @@ function drawDonut(canvas, high, medium, low, size){
     }
     start+=sweep;
   });
+}
+
+function exportTablasPDF(){
+  const mes = currentMes || 'Dashboard';
+
+  // Collect acum table HTML
+  const acumEl = document.getElementById('acumTable');
+  const acumHTML = acumEl ? acumEl.innerHTML : '';
+
+  // Collect YTD combined legend
+  const ytdLegendEl = document.getElementById('ytdCombinedLegend');
+  const ytdTotalEl  = document.getElementById('ytdCombinedTotal');
+  const ytdGridEl   = document.getElementById('ytdGrid');
+
+  // Build YTD table from legend data
+  const ytdRows = ['booking','airbnb','expedia','google','hw'];
+  const ytdLabels = {booking:'Booking.com', airbnb:'Airbnb', expedia:'Expedia', google:'Google', hw:'HostelWorld'};
+  const ytd = getYTDAccum();
+  const pct = (v,t) => t>0 ? Math.round(v/t*100)+'%' : '—';
+  const combined = {high:0,medium:0,low:0,total:0};
+  ytdRows.forEach(k=>['high','medium','low','total'].forEach(q=>combined[q]+=ytd[k][q]));
+
+  const ytdTableHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
+      <thead>
+        <tr style="background:#38495D;color:#fff">
+          <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Fuente</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase">⭐ High (5★)</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase">✓ Medium (4★)</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase">⚠ Low (≤3★)</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase">Total</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase">% High</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#EBF7F8;font-weight:700;border-bottom:2px solid #168C95">
+          <td style="padding:8px 12px">Triver (Total)</td>
+          <td style="padding:8px 12px;text-align:center;color:#168C95">${combined.high}</td>
+          <td style="padding:8px 12px;text-align:center;color:#F9A058">${combined.medium}</td>
+          <td style="padding:8px 12px;text-align:center;color:#E26147">${combined.low}</td>
+          <td style="padding:8px 12px;text-align:center;font-weight:700">${combined.total}</td>
+          <td style="padding:8px 12px;text-align:center;font-weight:700">${pct(combined.high,combined.total)}</td>
+        </tr>
+        ${ytdRows.map((k,i)=>`
+        <tr style="background:${i%2===0?'#fff':'#F4F5F7'}">
+          <td style="padding:8px 12px">${ytdLabels[k]}</td>
+          <td style="padding:8px 12px;text-align:center;color:#168C95">${ytd[k].high}</td>
+          <td style="padding:8px 12px;text-align:center;color:#F9A058">${ytd[k].medium}</td>
+          <td style="padding:8px 12px;text-align:center;color:#E26147">${ytd[k].low}</td>
+          <td style="padding:8px 12px;text-align:center">${ytd[k].total}</td>
+          <td style="padding:8px 12px;text-align:center">${pct(ytd[k].high,ytd[k].total)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // Open print window
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Triver KPIs — ${mes}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#fff;color:#1E2A38;padding:32px;font-size:13px}
+  h1{font-size:18px;font-weight:800;color:#38495D;margin-bottom:4px}
+  h2{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#168C95;margin:24px 0 8px;padding-bottom:4px;border-bottom:2px solid #168C95}
+  .meta{font-size:11px;color:#6B7A8D;margin-bottom:24px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#38495D;color:#fff;padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  th.num{text-align:center}
+  td{padding:8px 12px;border-top:1px solid #DDE1E8}
+  td.num{text-align:center;font-weight:600}
+  tr:nth-child(even) td{background:#F4F5F7}
+  .triver-row td{background:#FFF3E0!important;font-weight:700;border-top:2px solid #F9A058!important;border-bottom:2px solid #F9A058!important}
+  .up{color:#1AA87A;font-weight:700}
+  .down{color:#E26147;font-weight:700}
+  .flat{color:#F0B429;font-weight:700}
+  .logo-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #38495D}
+  .logo-symbol{width:32px;height:36px}
+  @media print{
+    body{padding:16px}
+    @page{margin:1.5cm;size:A4 landscape}
+  }
+</style>
+</head>
+<body>
+<div class="logo-bar">
+  <svg class="logo-symbol" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="10" cy="2" r="1.4" fill="#38495D"/>
+    <rect x="3.5" y="1.2" width="4.5" height="2" rx="0.6" transform="rotate(40 3.5 1.2)" fill="#E26147"/>
+    <rect x="12" y="1.2" width="4.5" height="2" rx="0.6" transform="rotate(-40 16.5 1.2)" fill="#E26147"/>
+    <rect x="4" y="6" width="12" height="2.2" rx="0.8" fill="#F9A058"/>
+    <path d="M4.5 10.5 L10 14.5 L15.5 10.5" stroke="#168C95" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M4.5 14 L10 18 L15.5 14" stroke="#E26147" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </svg>
+  <div>
+    <h1>Triver Coliving — KPIs Operativos</h1>
+    <div class="meta">Período: ${mes} &nbsp;·&nbsp; Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+</div>
+
+<h2>Score Acumulado por Canal</h2>
+<div id="acumWrap">${acumHTML}</div>
+
+<h2 style="margin-top:32px">YTD Score Analysis — Clasificación de Reseñas</h2>
+${ytdTableHTML}
+
+<script>
+  // Fix delta colors in acum table
+  document.querySelectorAll('.acum-delta-up').forEach(el=>el.style.color='#1AA87A');
+  document.querySelectorAll('.acum-delta-down').forEach(el=>el.style.color='#E26147');
+  document.querySelectorAll('.acum-delta-flat').forEach(el=>el.style.color='#F0B429');
+  document.querySelectorAll('.acum-pct-up').forEach(el=>el.style.color='#1AA87A');
+  document.querySelectorAll('.acum-pct-down').forEach(el=>el.style.color='#E26147');
+  document.querySelectorAll('.acum-pct-flat').forEach(el=>el.style.color='#F0B429');
+  document.querySelectorAll('.acum-triver-row td').forEach(el=>{el.style.background='#FFF3E0';el.style.fontWeight='700'});
+  // Fix SVG icons size
+  document.querySelectorAll('.acum-channel-icon').forEach(el=>{el.style.display='inline-flex';el.style.verticalAlign='middle';el.style.marginRight='8px'});
+  setTimeout(()=>window.print(), 400);
+<\/script>
+</body>
+</html>`);
+  win.document.close();
 }
 
 function renderAcumTable(){
