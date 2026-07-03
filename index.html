@@ -431,6 +431,23 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 }
 @media(max-width:1100px){.totem-capture{display:none}}
 
+/* ══ ACUM TABLE — Score acumulado por canal ══ */
+.acum-triver-row td{
+  background:linear-gradient(90deg,rgba(249,160,88,.12) 0%,rgba(249,160,88,.04) 100%) !important;
+  font-weight:700;
+  border-top:3px solid var(--triver-orange) !important;
+  border-bottom:2px solid var(--triver-orange) !important;
+}
+.acum-triver-row td:first-child{color:var(--triver-navy);font-size:13px}
+.acum-channel-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;margin-right:8px;vertical-align:middle;flex-shrink:0}
+.acum-channel-icon svg{display:block}
+.acum-delta-up{color:var(--green);font-weight:700;white-space:nowrap}
+.acum-delta-down{color:var(--red);font-weight:700;white-space:nowrap}
+.acum-delta-flat{color:var(--muted);font-weight:600}
+.acum-pct-up{color:var(--green);font-size:11px;font-weight:600}
+.acum-pct-down{color:var(--red);font-size:11px;font-weight:600}
+.acum-pct-flat{color:var(--muted);font-size:11px}
+
 /* RESPONSIVE */
 @media(max-width:700px){
   header,main{padding-left:14px;padding-right:14px}
@@ -485,6 +502,9 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <div class="csat-info" id="csatInfo"></div>
   </div>
   <div class="breakdown" id="csatBreakdown"></div>
+
+  <div class="section-label" style="margin-top:28px">Score Acumulado por Canal</div>
+  <div class="breakdown" id="acumTable"></div>
 
   <div class="section-label">KPIs — Hosts</div>
   <div class="cards-grid wide" id="hostsCards"></div>
@@ -1197,6 +1217,7 @@ function renderDashboard(){
     mkCard('% Tickets en Tiempo',mant.cumplimiento!=null?mant.cumplimiento.toFixed(1)+'%':'—','',cSem,null,'Meta: ≥ 90%');
 
   renderHKDetail(md);
+  renderAcumTable();
   renderYTD();
 }
 
@@ -1603,6 +1624,175 @@ function drawDonut(canvas, high, medium, low, size){
     }
     start+=sweep;
   });
+}
+
+function renderAcumTable(){
+  const el = document.getElementById('acumTable');
+  if(!el) return;
+
+  // Current and previous month data
+  const [tMon, tYear] = currentMes.split(' ');
+  const tOrd = parseInt(tYear)*12 + MONTHS_ES.indexOf(tMon);
+  const md = appData.meses.find(m => m.mes === currentMes);
+  if(!md){ el.innerHTML=''; return; }
+
+  // Find prev month
+  const prevMes = appData.meses.slice().sort((a,b)=>{
+    const [am,ay]=a.mes.split(' '), [bm,by]=b.mes.split(' ');
+    return (parseInt(ay)*12+MONTHS_ES.indexOf(am)) - (parseInt(by)*12+MONTHS_ES.indexOf(bm));
+  }).reverse().find(m => {
+    const [mm,my]=m.mes.split(' ');
+    return parseInt(my)*12+MONTHS_ES.indexOf(mm) < tOrd;
+  });
+
+  const kCurr = getKPIs(md);
+  const kPrev = prevMes ? getKPIs(prevMes) : null;
+
+  // YTD reviews per channel (sum all months up to currentMes)
+  const ytdRevByChannel = {airbnb:0, booking:0, expedia:0, google:0, hw:0};
+  appData.meses.forEach(m => {
+    const [mm,my]=m.mes.split(' ');
+    const mOrd=parseInt(my)*12+MONTHS_ES.indexOf(mm);
+    if(mOrd > tOrd) return;
+    ytdRevByChannel.airbnb  += getKPIs(m).sources.airbnb.count  || 0;
+    ytdRevByChannel.booking += getKPIs(m).sources.booking.count || 0;
+    ytdRevByChannel.expedia += getKPIs(m).sources.expedia.count || 0;
+    ytdRevByChannel.google  += getKPIs(m).sources.google.count  || 0;
+    ytdRevByChannel.hw      += getKPIs(m).sources.hw.count      || 0;
+  });
+
+  const f  = v => v != null ? v.toFixed(2) : '—';
+  const fi = v => v > 0 ? v : '—';
+
+  // Delta helpers
+  function deltaCell(curr, prev){
+    if(curr == null || prev == null) return '<td class="num acum-delta-flat">—</td>';
+    const d = curr - prev;
+    if(Math.abs(d) < 0.005) return '<td class="num acum-delta-flat">= 0.00</td>';
+    const cls = d > 0 ? 'acum-delta-up' : 'acum-delta-down';
+    const arr = d > 0 ? '▲' : '▼';
+    return `<td class="num ${cls}">${arr} ${Math.abs(d).toFixed(2)}</td>`;
+  }
+  function pctCell(curr, prev){
+    if(curr == null || prev == null || prev === 0) return '<td class="num acum-pct-flat">—</td>';
+    const p = ((curr - prev) / prev) * 100;
+    if(Math.abs(p) < 0.05) return '<td class="num acum-pct-flat">0.00%</td>';
+    const cls = p > 0 ? 'acum-pct-up' : 'acum-pct-down';
+    const arr = p > 0 ? '▲' : '▼';
+    return `<td class="num ${cls}">${arr} ${Math.abs(p).toFixed(2)}%</td>`;
+  }
+
+  // Platform SVG logos
+  const LOGOS = {
+    airbnb: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="20" height="20" rx="4" fill="#FF5A5F"/>
+      <path d="M10 3.5c-.55 0-.98.25-1.28.65L5.4 9.08c-.52.8-.42 1.82.24 2.48.43.43 1 .65 1.58.65.38 0 .76-.1 1.1-.3L10 10.88l1.68 1.03c.34.2.72.3 1.1.3.58 0 1.15-.22 1.58-.65.66-.66.76-1.68.24-2.48l-3.32-4.93C11 3.75 10.55 3.5 10 3.5zm0 1.1c.2 0 .37.1.5.28l3.3 4.9c.28.43.22.98-.13 1.33-.22.22-.52.33-.82.33-.2 0-.4-.05-.57-.16L10.5 9.9a.57.57 0 0 0-.5 0l-1.78 1.08c-.17.11-.37.16-.57.16-.3 0-.6-.11-.82-.33-.35-.35-.41-.9-.13-1.33l3.3-4.9c.13-.18.3-.28.5-.28zm0 7.5c.57.9 1.1 1.63 1.1 2.17 0 .6-.5 1.1-1.1 1.1s-1.1-.5-1.1-1.1c0-.54.53-1.27 1.1-2.17z" fill="white"/>
+    </svg>`,
+    booking: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="20" height="20" rx="4" fill="#003580"/>
+      <text x="3" y="14" font-family="Arial Black,Arial" font-weight="900" font-size="11" fill="white">B.</text>
+    </svg>`,
+    expedia: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="20" height="20" rx="4" fill="#FFC72C"/>
+      <circle cx="10" cy="10" r="5.5" fill="#1B3A74"/>
+      <circle cx="10" cy="10" r="3" fill="#FFC72C"/>
+      <circle cx="10" cy="10" r="1.2" fill="#1B3A74"/>
+    </svg>`,
+    google: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="20" height="20" rx="4" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+      <path d="M15.5 10.18c0-.4-.04-.78-.1-1.15H10v2.18h3.08a2.63 2.63 0 0 1-1.14 1.72v1.43h1.85c1.08-1 1.71-2.47 1.71-4.18z" fill="#4285F4"/>
+      <path d="M10 16c1.54 0 2.83-.51 3.78-1.38l-1.85-1.43c-.51.34-1.16.55-1.93.55-1.48 0-2.74-.99-3.19-2.33H4.9v1.48A5.99 5.99 0 0 0 10 16z" fill="#34A853"/>
+      <path d="M6.81 11.41A3.6 3.6 0 0 1 6.62 10c0-.49.09-.97.19-1.41V7.11H4.9A5.99 5.99 0 0 0 4 10c0 .97.23 1.88.9 2.89l1.91-1.48z" fill="#FBBC05"/>
+      <path d="M10 6.27c.84 0 1.59.29 2.18.85l1.63-1.63A5.83 5.83 0 0 0 10 4a5.99 5.99 0 0 0-5.1 2.89l1.91 1.48C7.26 7.03 8.52 6.27 10 6.27z" fill="#EA4335"/>
+    </svg>`,
+    hw: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="20" height="20" rx="4" fill="#E86B30"/>
+      <text x="2.5" y="14" font-family="Arial Black,Arial" font-weight="900" font-size="9.5" fill="white">HW</text>
+    </svg>`
+  };
+
+  // Channels
+  const channels = [
+    { key:'airbnb',  label:'Airbnb'      },
+    { key:'booking', label:'Booking.com' },
+    { key:'expedia', label:'Expedia'     },
+    { key:'google',  label:'Google'      },
+    { key:'hw',      label:'HostelWorld' },
+  ];
+
+  // Triver row: weighted avg of all channel acums
+  function triverAcum(k){
+    const s = k.sources;
+    return wavg([
+      {score:s.airbnb.acum,  count:ytdRevByChannel.airbnb  || s.airbnb.count  || 1},
+      {score:s.booking.acum, count:ytdRevByChannel.booking || s.booking.count || 1},
+      {score:s.expedia.acum, count:ytdRevByChannel.expedia || s.expedia.count || 1},
+      {score:s.google.acum,  count:ytdRevByChannel.google  || s.google.count  || 1},
+      {score:s.hw.acum,      count:ytdRevByChannel.hw      || s.hw.count      || 1},
+    ]);
+  }
+
+  const tvCurr = triverAcum(kCurr);
+  const tvPrev = kPrev ? triverAcum(kPrev) : null;
+  const tvYTD  = Object.values(ytdRevByChannel).reduce((a,b)=>a+b,0);
+
+  // Build rows
+  const channelRows = channels.map(ch => {
+    const curr = kCurr.sources[ch.key].acum;
+    const prev = kPrev ? kPrev.sources[ch.key].acum : null;
+    const countMes = kCurr.sources[ch.key].count || 0;
+    const countYTD = ytdRevByChannel[ch.key] || 0;
+    return `<tr>
+      <td style="display:flex;align-items:center"><span class="acum-channel-icon">${LOGOS[ch.key]}</span>${ch.label}</td>
+      <td class="num">${f(curr)}</td>
+      ${deltaCell(curr, prev)}
+      ${pctCell(curr, prev)}
+      <td class="num">${fi(countMes)}</td>
+      <td class="num">${fi(countYTD)}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Canal</th>
+          <th class="num">Rating Actual</th>
+          <th class="num">Δ vs Mes Anterior</th>
+          <th class="num">Cambio %</th>
+          <th class="num">Reseñas del Mes</th>
+          <th class="num">Total YTD</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="acum-triver-row">
+          <td style="display:flex;align-items:center">
+            <span class="acum-channel-icon" style="background:#fff;border:1px solid #D6DAE3">
+              <svg width="18" height="18" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Dot coral arriba centro -->
+                <circle cx="10" cy="2" r="1.4" fill="#38495D"/>
+                <!-- Dos alas corales -->
+                <rect x="3.5" y="1.2" width="4.5" height="2" rx="0.6" transform="rotate(40 3.5 1.2)" fill="#E26147"/>
+                <rect x="12" y="1.2" width="4.5" height="2" rx="0.6" transform="rotate(-40 16.5 1.2)" fill="#E26147"/>
+                <!-- Barra naranja -->
+                <rect x="4" y="6" width="12" height="2.2" rx="0.8" fill="#F9A058"/>
+                <!-- Chevron teal -->
+                <path d="M4.5 10.5 L10 14.5 L15.5 10.5" stroke="#168C95" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <!-- Chevron coral -->
+                <path d="M4.5 14 L10 18 L15.5 14" stroke="#E26147" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </span>
+            Triver CSAT
+          </td>
+          <td class="num">${f(tvCurr)}</td>
+          ${deltaCell(tvCurr, tvPrev)}
+          ${pctCell(tvCurr, tvPrev)}
+          <td class="num">${fi(['airbnb','booking','expedia','google','hw'].reduce((s,k)=>s+(kCurr.sources[k].count||0),0))}</td>
+          <td class="num">${fi(tvYTD)}</td>
+        </tr>
+        ${channelRows}
+      </tbody>
+    </table>`;
 }
 
 function renderYTD(){
