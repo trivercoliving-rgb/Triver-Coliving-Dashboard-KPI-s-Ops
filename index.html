@@ -918,7 +918,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <div class="source-card">
       <div class="source-header">
         <span class="source-name">KPIs — Mantenimiento</span>
-        <span class="source-type">Whistle · Arturo Cruz</span>
+        <span class="source-type">Whistle</span>
       </div>
       <div class="source-body">
         <div class="field-grid cols2">
@@ -1180,8 +1180,10 @@ function renderDashboard(){
 
   // Use csatAcum if available, else fallback to HIST_BASE
   const csatBase=csatAcum!=null?csatAcum:HIST_BASE.csat;
-  const staffBase=HIST_BASE.staff;
-  const cleanBase=HIST_BASE.cleanliness;
+  // Staff & cleanliness bases: YTD ponderado hasta mes actual
+  const ytdSC = getYTDStaffClean();
+  const staffBase = ytdSC.staff != null ? ytdSC.staff : HIST_BASE.staff;
+  const cleanBase = ytdSC.cleanliness != null ? ytdSC.cleanliness : HIST_BASE.cleanliness;
 
   // CSAT hero
   const cC=csat==null?'var(--muted)':csat>=4.5?'var(--green)':csat>=4.3?'var(--yellow)':'var(--red)';
@@ -1221,7 +1223,7 @@ function renderDashboard(){
   const aSem=hosts.share_andrea!=null?(hosts.share_andrea>=40?'green':'red'):'neutral';
   const staffSem=sD!=null?(sD>=0.03?'green':sD>=-0.05?'yellow':'red'):'neutral';
   document.getElementById('hostsCards').innerHTML=
-    mkCard('Staff Score',staff!=null?staff.toFixed(2):'—',`Base ${staffBase.toFixed(2)}`,staffSem,sD,'Meta: superar histórico +0.03 pts')+
+    mkCard('Staff Score',staff!=null?staff.toFixed(2):'—',`YTD ${staffBase.toFixed(2)}`,staffSem,sD,'Meta: YTD Staff +0.03 pts')+
     mkCard('Response Time',hosts.response_time!=null?hosts.response_time.toFixed(0)+' min':'—','Fuente: Whistle',rtSem,null,'Meta: ≤ 60 min')+
     mkCard('% Auditorías QA',hosts.qa_completion!=null?hosts.qa_completion.toFixed(1)+'%':'—','',qaSem,null,'Meta: > 50%');
 
@@ -1234,16 +1236,17 @@ function renderDashboard(){
   // HK cards
   const cleanSem=clD!=null?(clD>=0.03?'green':clD>=-0.05?'yellow':'red'):'neutral';
   const lSem=hk.limpiezas!=null?(hk.limpiezas>=400?'green':hk.limpiezas>=360?'yellow':'red'):'neutral';
+  const hSem=hk.hallazgos!=null?(hk.hallazgos<20?'green':hk.hallazgos<=25?'yellow':'red'):'neutral';
   document.getElementById('hkCards').innerHTML=
-    mkCard('Cleanliness Score',cleanliness!=null?cleanliness.toFixed(2):'—',`Base ${cleanBase.toFixed(2)}`,cleanSem,clD,'Meta: superar histórico +0.03 pts')+
+    mkCard('Cleanliness Score',cleanliness!=null?cleanliness.toFixed(2):'—',`YTD ${cleanBase.toFixed(2)}`,cleanSem,clD,'Meta: YTD Limpieza +0.03 pts')+
     mkCard('Total Limpiezas',hk.limpiezas!=null?hk.limpiezas.toString():'—','',lSem,null,'Meta: ≥ 400 por mes')+
-    mkCard('% Hallazgos QA HK',hk.hallazgos!=null?hk.hallazgos.toFixed(1)+'%':'—','','neutral',null,'Menor es mejor');
+    mkCard('% Hallazgos QA HK',hk.hallazgos!=null?hk.hallazgos.toFixed(1)+'%':'—','',hSem,null,'Meta: < 20%');
 
   // Mantenimiento cards
   const tSem=mant.tiempo!=null?(mant.tiempo<=24?'green':mant.tiempo<=32?'yellow':'red'):'neutral';
   const cSem=mant.cumplimiento!=null?(mant.cumplimiento>=90?'green':mant.cumplimiento>=75?'yellow':'red'):'neutral';
   document.getElementById('mantCards').innerHTML=
-    mkCard('Tiempo Prom. Ticket',mant.tiempo!=null?mant.tiempo.toFixed(1)+' h':'—','Fuente: Whistle',tSem,null,'Meta: ≤ 24 h · Arturo Cruz')+
+    mkCard('Tiempo Prom. Ticket',mant.tiempo!=null?mant.tiempo.toFixed(1)+' h':'—','Fuente: Whistle',tSem,null,'Meta: ≤ 24 h')+
     mkCard('% Tickets en Tiempo',mant.cumplimiento!=null?mant.cumplimiento.toFixed(1)+'%':'—','',cSem,null,'Meta: ≥ 90%');
 
   renderHKDetail(md);
@@ -1725,6 +1728,31 @@ function getYTDAccum(){
     });
   });
   return acc;
+}
+
+function getYTDStaffClean(){
+  // Calcula promedio ponderado YTD de staff y cleanliness hasta currentMes inclusive
+  const [tMon,tYear]=currentMes.split(' ');
+  const tOrd=parseInt(tYear)*12+MONTHS_ES.indexOf(tMon);
+  let staffSum=0,staffW=0,cleanSum=0,cleanW=0;
+  appData.meses.forEach(m=>{
+    const [mMon,mYr]=m.mes.split(' ');
+    const mOrd=parseInt(mYr)*12+MONTHS_ES.indexOf(mMon);
+    if(mOrd>tOrd) return;
+    const k=getKPIs(m);
+    if(k.staff!=null){
+      const w=k.sources.booking.count+k.sources.airbnb.count+k.sources.expedia.count||1;
+      staffSum+=k.staff*w; staffW+=w;
+    }
+    if(k.cleanliness!=null){
+      const w=k.sources.booking.count+k.sources.airbnb.count+k.sources.expedia.count||1;
+      cleanSum+=k.cleanliness*w; cleanW+=w;
+    }
+  });
+  return {
+    staff:     staffW>0  ? staffSum/staffW   : null,
+    cleanliness: cleanW>0? cleanSum/cleanW   : null
+  };
 }
 
 function combineYTD(counts){
