@@ -492,6 +492,8 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('staff',this)">Staff</button>
+  <button class="tab-btn" onclick="switchTab('housekeeping',this)">Housekeeping</button>
   <button class="tab-btn" onclick="switchTab('capture',this)">Captura de datos</button>
 </div>
 
@@ -520,7 +522,6 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 
   <div class="section-label">KPIs — Housekeeping</div>
   <div class="cards-grid" id="hkCards"></div>
-  <div class="hk-detail-grid" id="hkDetailGrid"></div>
 
   <div class="section-label">KPIs — Mantenimiento</div>
   <div class="cards-grid" id="mantCards"></div>
@@ -555,6 +556,22 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   </div>
   <div class="ytd-grid" id="ytdGrid"></div>
 
+</main>
+</div>
+
+<!-- ═══ TAB: STAFF ═══ -->
+<div id="tab-staff" class="tab-panel">
+<main>
+  <div class="section-label">Share de Auditorías — Hosts</div>
+  <div class="cards-grid wide" id="staffShareCards"></div>
+</main>
+</div>
+
+<!-- ═══ TAB: HOUSEKEEPING ═══ -->
+<div id="tab-housekeeping" class="tab-panel">
+<main>
+  <div class="section-label">Detalles HK por Categoría e Integrante</div>
+  <div class="hk-detail-grid" id="hkDetailGrid"></div>
 </main>
 </div>
 
@@ -1157,7 +1174,7 @@ function render(){
 
 function renderDashboard(){
   const md=appData.meses.find(m=>m.mes===currentMes);
-  if(!md){['csatBig','csatBadge','csatInfo','csatBreakdown','hostsCards','hkCards','mantCards'].forEach(id=>document.getElementById(id).innerHTML='');return;}
+  if(!md){['csatBig','csatBadge','csatInfo','csatBreakdown','hostsCards','hkCards','mantCards','staffShareCards','hkDetailGrid'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});return;}
   const k=getKPIs(md);
   const {csat,csatAcum,staff,cleanliness,sources,hosts,hk,mant}=k;
 
@@ -1206,7 +1223,11 @@ function renderDashboard(){
   document.getElementById('hostsCards').innerHTML=
     mkCard('Staff Score',staff!=null?staff.toFixed(2):'—',`Base ${staffBase.toFixed(2)}`,staffSem,sD,'Meta: superar histórico +0.03 pts')+
     mkCard('Response Time',hosts.response_time!=null?hosts.response_time.toFixed(0)+' min':'—','Fuente: Whistle',rtSem,null,'Meta: ≤ 60 min')+
-    mkCard('% Auditorías QA',hosts.qa_completion!=null?hosts.qa_completion.toFixed(1)+'%':'—','',qaSem,null,'Meta: > 50%')+
+    mkCard('% Auditorías QA',hosts.qa_completion!=null?hosts.qa_completion.toFixed(1)+'%':'—','',qaSem,null,'Meta: > 50%');
+
+  // Staff tab — Share cards
+  const staffShareEl = document.getElementById('staffShareCards');
+  if(staffShareEl) staffShareEl.innerHTML =
     mkCard('Share Sofía',hosts.share_sofia!=null?hosts.share_sofia.toFixed(1)+'%':'—',hosts.aud_total?`${ni(appData.meses.find(m=>m.mes===currentMes).hosts.aud_sofia)} de ${hosts.aud_total} aud.`:'',sSem,null,'Meta: > 40%')+
     mkCard('Share Andrea',hosts.share_andrea!=null?hosts.share_andrea.toFixed(1)+'%':'—',hosts.aud_total?`${ni(appData.meses.find(m=>m.mes===currentMes).hosts.aud_andrea)} de ${hosts.aud_total} aud.`:'',aSem,null,'Meta: > 40%');
 
@@ -2609,6 +2630,7 @@ function switchTab(name,btn){
   btn.classList.add('active');
   if(name==='capture')updateCaptureTab();
   if(name==='dashboard'){renderDashboard();setTimeout(renderChart,50);}
+  if(name==='staff'||name==='housekeeping')renderDashboard();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
