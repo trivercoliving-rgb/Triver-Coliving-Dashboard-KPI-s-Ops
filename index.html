@@ -1383,10 +1383,9 @@ function processQACSV(input) {
 
       let totalAudits = 0, sofiaN = 0, andreaaN = 0;
       let totalDetails = 0;
-      // {displayName: {response: count}}
       const detailByCategory = {};
-      // {cleaner: {displayName_response: count}}
       const detailByCleaner  = {};
+      const auditsByCleaner  = {}; // {cleaner: count of audits}
 
       for (let i = 1; i < allRows.length; i++) {
         const vals = allRows[i];
@@ -1410,6 +1409,9 @@ function processQACSV(input) {
         else if (qa === 'Andrea') andreaaN++;
 
         const cleaner = (cleanerIdx >= 0 ? rowObj[headers[cleanerIdx]] : '') || 'Desconocido';
+
+        // Count audits per cleaner
+        auditsByCleaner[cleaner] = (auditsByCleaner[cleaner] || 0) + 1;
 
         // HK detail counting
         Object.keys(HK_RULES).forEach(col => {
@@ -1458,7 +1460,8 @@ function processQACSV(input) {
         hallazgos_pct: parseFloat(hallazgosPct.toFixed(2)),
         total_details: totalDetails,
         by_category: catFlat,
-        by_cleaner: cleanerFlat
+        by_cleaner: cleanerFlat,
+        audits_by_cleaner: auditsByCleaner
       };
 
       // Persist
@@ -1553,7 +1556,56 @@ function renderHKDetail(md) {
   );
   const maxCat = cats.length ? cats[0][1] : 1;
 
+  // Performance table: detalles / auditorías por integrante
+  const audByC = qa.audits_by_cleaner || {};
+  const perfRows = cleaners.map(([name, totalDets]) => {
+    const auds = audByC[name] || 0;
+    const ratio = auds > 0 ? totalDets / auds : null;
+    return { name, totalDets, auds, ratio };
+  }).filter(r => r.auds > 0).sort((a,b) => (a.ratio ?? 99) - (b.ratio ?? 99));
+
+  const maxRatio = perfRows.length ? Math.max(...perfRows.map(r => r.ratio || 0)) : 1;
+  const bestRatio = perfRows.length ? perfRows[0].ratio : null;
+
+  const perfHTML = perfRows.length ? `
+    <div class="hk-detail-card" style="grid-column:1/-1;margin-bottom:4px">
+      <div class="hk-detail-card-title">Desempeño HK — Detalles por Auditoría (menor es mejor)</div>
+      <table class="hk-table">
+        <thead>
+          <tr>
+            <th>Integrante</th>
+            <th class="num" style="text-align:center">Auditorías</th>
+            <th class="num" style="text-align:center">Detalles</th>
+            <th class="num" style="text-align:center">% Detalles/Aud.</th>
+            <th>Histograma</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${perfRows.map((r,i) => {
+            const isBest = i === 0;
+            const barW = maxRatio > 0 ? Math.round((r.ratio/maxRatio)*120) : 0;
+            const barColor = isBest ? 'var(--green)' : (r.ratio <= bestRatio*1.2 ? 'var(--yellow)' : 'var(--red)');
+            return `<tr style="${isBest?'background:var(--green-dim)!important':''}">
+              <td style="font-weight:${isBest?'700':'400'}">
+                ${isBest?'🏆 ':''}${r.name}
+              </td>
+              <td class="num" style="text-align:center">${r.auds}</td>
+              <td class="num" style="text-align:center">${r.totalDets}</td>
+              <td class="num" style="text-align:center;font-weight:700;color:${barColor}">${(r.ratio*100).toFixed(1)}%</td>
+              <td style="padding:6px 8px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:${barW}px;height:10px;border-radius:3px;background:${barColor};flex-shrink:0;min-width:2px"></div>
+                  <span style="font-size:10px;color:var(--muted)">${(r.ratio*100).toFixed(1)}%</span>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>` : '';
+
   grid.innerHTML = `
+    ${perfHTML}
     <div class="hk-detail-card">
       <div class="hk-detail-card-title">Detalles por Categoría — ${qa.total_details || 0} total</div>
       <table class="hk-table">
