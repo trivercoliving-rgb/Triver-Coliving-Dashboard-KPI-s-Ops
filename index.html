@@ -1444,6 +1444,7 @@ function processQACSV(input) {
           catFlat.push([`${cat} — ${resp}`, cnt]);
         });
       });
+      catFlat.sort((a,b) => b[1] - a[1]);
 
       // Flatten cleaner breakdown: [{cleaner, total, details:[{key,cnt}]}]
       const cleanerFlat = Object.entries(detailByCleaner).map(([cleaner, cats]) => {
