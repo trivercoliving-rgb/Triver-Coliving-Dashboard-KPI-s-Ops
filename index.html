@@ -1488,7 +1488,10 @@ function renderQABreakdownCapture(qa) {
   const el = document.getElementById('qaBreakdownCapture');
   if (!el) return;
   const cats = qa.by_category || [];
-  const cleaners = qa.by_cleaner || [];
+  // Support old structure: by_cleaner was [{name, count}] flat array
+  const cleaners = (qa.by_cleaner || []).map(c =>
+    Array.isArray(c) && c.length === 3 ? c : [c[0], c[1], []]
+  );
   const maxCat = cats.length ? cats[0][1] : 1;
 
   el.innerHTML = `
@@ -1514,14 +1517,11 @@ function renderQABreakdownCapture(qa) {
           <div style="font-size:11px;font-weight:700;color:var(--triver-navy);margin-bottom:4px">
             ${name} — <span style="color:var(--triver-teal)">${total} detalles</span>
           </div>
-          <table class="hk-table">
-            <thead><tr><th>Categoría — Detalle</th><th style="text-align:right">#</th></tr></thead>
-            <tbody>
-              ${details.map(([key, n]) => `
-                <tr><td style="font-size:11px;padding-left:12px">${key}</td>
-                <td class="num">${n}</td></tr>`).join('')}
-            </tbody>
-          </table>
+          ${details.length ? `<table class="hk-table"><tbody>
+            ${details.map(([key, n]) => `
+              <tr><td style="font-size:11px;padding-left:12px">${key}</td>
+              <td class="num">${n}</td></tr>`).join('')}
+          </tbody></table>` : ''}
         </div>`).join('')}
     </div>`;
 }
@@ -1533,7 +1533,10 @@ function renderHKDetail(md) {
   if (!qa || !qa.total) { grid.innerHTML = ''; return; }
 
   const cats = qa.by_category || [];
-  const cleaners = qa.by_cleaner || [];
+  // Support old structure
+  const cleaners = (qa.by_cleaner || []).map(c =>
+    Array.isArray(c) && c.length === 3 ? c : [c[0], c[1], []]
+  );
   const maxCat = cats.length ? cats[0][1] : 1;
 
   grid.innerHTML = `
@@ -1559,13 +1562,11 @@ function renderHKDetail(md) {
           <div style="font-size:11px;font-weight:700;color:var(--triver-navy);margin-bottom:3px">
             ${name} <span style="color:var(--triver-teal);font-weight:400">(${total})</span>
           </div>
-          <table class="hk-table">
-            <tbody>
-              ${details.map(([key, n]) => `
-                <tr><td style="font-size:10px;padding:4px 8px">${key}</td>
-                <td class="num" style="padding:4px 8px">${n}</td></tr>`).join('')}
-            </tbody>
-          </table>
+          ${details.length ? `<table class="hk-table"><tbody>
+            ${details.map(([key, n]) => `
+              <tr><td style="font-size:10px;padding:4px 8px">${key}</td>
+              <td class="num" style="padding:4px 8px">${n}</td></tr>`).join('')}
+          </tbody></table>` : ''}
         </div>`).join('')}
     </div>`;
 }
