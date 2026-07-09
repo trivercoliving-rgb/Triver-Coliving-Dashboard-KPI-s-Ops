@@ -1237,52 +1237,108 @@ function renderDashboard(){
 // Columns fully excluded from HK details
 const QA_EXCLUDE_FULL = new Set(['Cerradura Y Salto','Puerta de Baño','Extractores','Puerta']);
 // Metadata columns to skip
+// ── HK Detail Rules ──
+// Each entry: { no: [values that do NOT count], yes: [values that DO count] | 'OTHER' (anything not in no) }
+const HK_RULES = {
+  'Espejo Entrada':    { no: ['ok',''], yes: ['sucio','manchado','con marcas','marcas'] },
+  'Espejo Entrada.1':  { no: ['ok',''], yes: ['sucio','manchado','con marcas','marcas'] },
+  'Cama e Interior':   { no: ['ok','','manchas suciedad','manchas de suciedad'], yes: ['mal tendida','pelo','cabello','basura'] },
+  'WC':                { no: ['ok','no funciona'], yes: 'OTHER' },
+  'WC.1':              { no: ['ok','no funciona'], yes: 'OTHER' },
+  'Bote de Basura':    { no: ['ok',''], yes: ['sin bolsa','con basura'] },
+  'Bote de Basura.1':  { no: ['ok',''], yes: ['sin bolsa','con basura'] },
+  'Bote de Basura.2':  { no: ['ok',''], yes: ['sin bolsa','con basura'] },
+  'Lavabo':            { no: ['ok','tapado','sarro'], yes: 'OTHER' },
+  'Lavabo.1':          { no: ['ok','tapado','sarro'], yes: 'OTHER' },
+  'Regadera/Piso Regadera':   { no: ['ok','manchas','con sarro','manchas/con sarro'], yes: ['cabellos','pelos','cabello'] },
+  'Regadera/Piso Regadera.1': { no: ['ok','manchas','con sarro','manchas/con sarro'], yes: ['cabellos','pelos','cabello'] },
+  'Ammenties de Baño y Consumibles (Papel de baño, jabón de manos, shampoo, gel de ducha, crema corporal)':   { no: ['completos','completas'], yes: ['incompletos','incompletas'] },
+  'Ammenties de Baño y Consumibles (Papel de baño, jabón de manos, shampoo, gel de ducha, crema corporal).1': { no: ['completos','completas'], yes: ['incompletos','incompletas'] },
+  'Piso Habitación':   { no: ['ok'], yes: ['manchas','suciedad','pelo','cabello','cabellos','basura'] },
+  'Piso Habitación.1': { no: ['ok'], yes: ['manchas','suciedad','pelo','cabello','cabellos','basura'] },
+  'Toallas':           { no: ['completos','completas','sucias','manchadas','sucias/manchadas'], yes: ['incompletas','incompletos'] },
+  'Repisas Baño':      { no: ['ok','flojas','caídas','flojas/caídas'], yes: ['con polvo','polvo'] },
+  'Frigobar':          { no: ['ok','no funciona'], yes: ['cabellos','pelos','manchas','suciedad'] },
+  'Ganchos y Tapones para oído': { no: ['ok'], yes: ['incompletos'] },
+  'Cama':              { no: ['ok','manchas suciedad','manchas de suciedad'], yes: ['mal tendida','pelo','cabello','cabellos'] },
+  'Ventanas':          { no: ['ok'], yes: ['manchas','suciedad','manchas suciedad'] },
+  'Gavetas y Cajones': { no: ['ok'], yes: ['artículos olvidados','sucio','polvo','artículos'] },
+  'Escritorio':        { no: ['ok','dañado','cajones averiados','dañado/cajones averiados'], yes: ['polvo','manchas'] },
+  'Utensilios de Cocina': { no: ['ok'], yes: ['incompletos','sucios'] },
+  'Sofa Cama':         { no: ['ok'], yes: ['cabellos','pelos','manchas','suciedad'] },
+};
+
+// Friendly display names for HK columns (merge .1/.2 duplicates)
+const HK_DISPLAY = {
+  'Espejo Entrada': 'Espejo Entrada',
+  'Espejo Entrada.1': 'Espejo Entrada',
+  'Cama e Interior': 'Cama e Interior',
+  'WC': 'WC',
+  'WC.1': 'WC',
+  'Bote de Basura': 'Bote de Basura',
+  'Bote de Basura.1': 'Bote de Basura',
+  'Bote de Basura.2': 'Bote de Basura',
+  'Lavabo': 'Lavabo',
+  'Lavabo.1': 'Lavabo',
+  'Regadera/Piso Regadera': 'Regadera/Piso Regadera',
+  'Regadera/Piso Regadera.1': 'Regadera/Piso Regadera',
+  'Ammenties de Baño y Consumibles (Papel de baño, jabón de manos, shampoo, gel de ducha, crema corporal)': 'Ammenities Baño y Consumibles',
+  'Ammenties de Baño y Consumibles (Papel de baño, jabón de manos, shampoo, gel de ducha, crema corporal).1': 'Ammenities Baño y Consumibles',
+  'Piso Habitación': 'Piso Habitación',
+  'Piso Habitación.1': 'Piso Habitación',
+  'Toallas': 'Toallas',
+  'Repisas Baño': 'Repisas Baño',
+  'Frigobar': 'Frigobar',
+  'Ganchos y Tapones para oído': 'Ganchos y Tapones para oído',
+  'Cama': 'Cama',
+  'Ventanas': 'Ventanas',
+  'Gavetas y Cajones': 'Gavetas y Cajones',
+  'Escritorio': 'Escritorio',
+  'Utensilios de Cocina': 'Utensilios de Cocina',
+  'Sofa Cama': 'Sofa Cama',
+};
+
+// Metadata columns to skip entirely
 const QA_SKIP = new Set(['Timestamp','Email Address','Nombre de persona que realiza QA',
-  'Fecha ','Persona que realizó la limpieza','# de Habitación','¿Es Hostal?','¿Es Habitación Doble?']);
-// Toallas: only 'Incompletas' counts as HK detail
-const TOALLAS_COL = 'Toallas';
-const TOALLAS_OK_EXTRA = new Set(['Sucias/Manchadas','Completas']);
-// Cama col 26 (exact name): exclude only Manchas/Suciedad
-const CAMA_COL = 'Cama';
-const CAMA_EXCLUDE_VAL = 'Manchas/Suciedad';
+  'Fecha ','Persona que realizó la limpieza','# de Habitación','¿Es Hostal?','¿Es Habitación Doble?',
+  'Fecha','Cerradura Y Salto','Cerradura Y Salto.1','Internet','Internet.1','A/C','Estado de Literas',
+  'Puerta de Baño','Puerta de Baño.1','Extractores','Extractores.1','Puerta',
+  'Luces, apagadores y lámparas','TV','¿Todas las paredes sin manchas y en buen estado?']);
 
-function qaIsOk(col, val) {
-  const v = val.trim();
-  if (!v) return true;
+function hkIsDetail(col, val) {
+  const rule = HK_RULES[col];
+  if (!rule) return { is: false, resp: '' };
+  const v = (val || '').trim();
   const vl = v.toLowerCase();
-  if (vl === 'ok' || vl === 'no') return true;
-  if (vl.startsWith('completo') || vl.startsWith('completa')) return true;
-  if (col === TOALLAS_COL && TOALLAS_OK_EXTRA.has(v)) return true;
-  if (col === CAMA_COL && v === CAMA_EXCLUDE_VAL) return true;
-  return false;
+  if (v === '' || rule.no.some(n => n.toLowerCase() === vl)) return { is: false, resp: v };
+  if (rule.yes === 'OTHER') return { is: true, resp: v };
+  if (rule.yes.some(y => vl.includes(y.toLowerCase()))) return { is: true, resp: v };
+  return { is: false, resp: v };
 }
 
-function qaIsHKDetail(col, val) {
-  if (QA_SKIP.has(col)) return false;
-  if (QA_EXCLUDE_FULL.has(col)) return false;
-  return !qaIsOk(col, val);
+function classifyQAPerson(name, email) {
+  const e = (email || '').trim().toLowerCase();
+  const n = (name  || '').trim().toLowerCase();
+  if (e === 'xndreita.martinez@gmail.com') return 'Andrea';
+  if (e === 'sofiaguzmantrigos@gmail.com' || e === 'trivercoliving44@gmail.com') return 'Sofía';
+  if (n.includes('andrea') || n.includes('anrea')) return 'Andrea';
+  if (n.includes('sofia') || n.includes('sofía')) return 'Sofía';
+  return null;
 }
 
-function parseQATimestamp(ts) {
-  // Two formats: 'DD/MM/YY HH:MM' or 'M/D/YYYY HH:MM:SS'
-  const datePart = ts.trim().split(' ')[0];
-  const parts = datePart.split('/');
+function parseQAFecha(val) {
+  // Handles: 'M/D/YYYY', 'DD/MM/YY', 'MM/DD/YYYY'
+  if (!val) return null;
+  const parts = val.trim().split('/');
   if (parts.length < 3) return null;
   const p0 = parseInt(parts[0]), p1 = parseInt(parts[1]), p2 = parseInt(parts[2]);
-  if (p1 > 12) {
-    // Format B: M/D/YYYY
-    return { mon: p0, yr: p2 };
-  } else {
-    // Format A: DD/MM/YY
-    return { mon: p1, yr: p2 < 100 ? p2 + 2000 : p2 };
-  }
-}
-
-function normalizeQAName(n) {
-  const s = n.trim().toLowerCase();
-  if (s.includes('sofia') || s.includes('sofía')) return 'Sofía';
-  if (s.includes('andrea')) return 'Andrea';
-  return null;
+  const yr = p2 < 100 ? p2 + 2000 : p2;
+  // If p1 > 12 → must be DD/MM/YY (p1=day, p0=month can't be >12 either if p1>12)
+  // If p0 > 12 → DD/MM/YYYY
+  if (p0 > 12) return { mon: p1, yr };    // DD/MM
+  if (p1 > 12) return { mon: p0, yr };    // MM/DD
+  // Ambiguous — assume M/D/YYYY (Google Forms default US format)
+  return { mon: p0, yr };
 }
 
 function processQACSV(input) {
@@ -1294,22 +1350,22 @@ function processQACSV(input) {
       if (allRows.length < 2) { showQAStatus('Archivo vacío o ilegible.', false); return; }
 
       const headers = allRows[0].map(h => h.trim());
-      const tsIdx = headers.findIndex(h => /timestamp/i.test(h));
-      const qaIdx = headers.findIndex(h => /nombre.*qa|persona.*qa/i.test(h));
+      const tsIdx      = headers.findIndex(h => /timestamp/i.test(h));
+      const fechaIdx   = headers.findIndex(h => /^fecha\s*$/i.test(h));
+      const qaIdx      = headers.findIndex(h => /nombre.*qa|persona.*qa/i.test(h));
+      const emailIdx   = headers.findIndex(h => /email/i.test(h));
       const cleanerIdx = headers.findIndex(h => /persona.*limpieza|realiz.*limpieza/i.test(h));
-      if (tsIdx < 0) { showQAStatus('No se encontró columna Timestamp.', false); return; }
 
       const [tMon, tYear] = currentMes.split(' ');
-      const tMonIdx = MONTHS_ES.indexOf(tMon) + 1; // 1-based
+      const tMonIdx = MONTHS_ES.indexOf(tMon) + 1;
       const tYearInt = parseInt(tYear);
 
-      // Audit columns (not metadata, not skipped)
-      const auditCols = headers.filter(h => !QA_SKIP.has(h));
-
       let totalAudits = 0, sofiaN = 0, andreaaN = 0;
-      let totalDetails = 0, totalCells = 0;
-      const detailByCategory = {}; // col → count
-      const detailByCleaner = {};  // cleaner → count
+      let totalDetails = 0;
+      // {displayName: {response: count}}
+      const detailByCategory = {};
+      // {cleaner: {displayName_response: count}}
+      const detailByCleaner  = {};
 
       for (let i = 1; i < allRows.length; i++) {
         const vals = allRows[i];
@@ -1317,73 +1373,101 @@ function processQACSV(input) {
         const rowObj = {};
         headers.forEach((h, j) => rowObj[h] = (vals[j] || '').trim());
 
-        const parsed = parseQATimestamp(rowObj['Timestamp'] || '');
+        // Date filtering — use Fecha column first, fallback to Timestamp
+        const fechaRaw = fechaIdx >= 0 ? rowObj[headers[fechaIdx]] : '';
+        const tsRaw    = tsIdx    >= 0 ? rowObj['Timestamp'] : '';
+        const parsed   = parseQAFecha(fechaRaw) || parseQAFecha(tsRaw ? tsRaw.split(' ')[0] : '');
         if (!parsed || parsed.mon !== tMonIdx || parsed.yr !== tYearInt) continue;
 
         totalAudits++;
-        const qaName = normalizeQAName(rowObj[headers[qaIdx]] || '');
-        if (qaName === 'Sofía') sofiaN++;
-        else if (qaName === 'Andrea') andreaaN++;
 
-        const cleaner = (rowObj[headers[cleanerIdx]] || 'Desconocido').trim();
+        // QA person classification: email first, then name
+        const qaEmail = emailIdx >= 0 ? (rowObj[headers[emailIdx]] || '') : '';
+        const qaName  = qaIdx    >= 0 ? (rowObj[headers[qaIdx]]    || '') : '';
+        const qa = classifyQAPerson(qaName, qaEmail);
+        if (qa === 'Sofía') sofiaN++;
+        else if (qa === 'Andrea') andreaaN++;
 
-        auditCols.forEach(col => {
+        const cleaner = (cleanerIdx >= 0 ? rowObj[headers[cleanerIdx]] : '') || 'Desconocido';
+
+        // HK detail counting
+        Object.keys(HK_RULES).forEach(col => {
+          if (!headers.includes(col)) return;
           const val = rowObj[col] || '';
-          if (!val) return;
-          totalCells++;
-          if (qaIsHKDetail(col, val)) {
-            totalDetails++;
-            detailByCategory[col] = (detailByCategory[col] || 0) + 1;
-            detailByCleaner[cleaner] = (detailByCleaner[cleaner] || 0) + 1;
-          }
+          const { is, resp } = hkIsDetail(col, val);
+          if (!is) return;
+
+          const dname = HK_DISPLAY[col];
+          totalDetails++;
+
+          if (!detailByCategory[dname]) detailByCategory[dname] = {};
+          detailByCategory[dname][resp] = (detailByCategory[dname][resp] || 0) + 1;
+
+          if (!detailByCleaner[cleaner]) detailByCleaner[cleaner] = {};
+          const key = `${dname} — ${resp}`;
+          detailByCleaner[cleaner][key] = (detailByCleaner[cleaner][key] || 0) + 1;
         });
       }
 
       if (totalAudits === 0) {
-        showQAStatus(`Sin auditorías para ${currentMes} en este archivo. Total filas: ${allRows.length - 1}`, false);
+        showQAStatus(`Sin auditorías para ${currentMes}. Verifica que el CSV incluya ese mes.`, false);
         return;
       }
 
-      const hallazgosPct = totalCells > 0 ? (totalDetails / totalCells * 100) : 0;
+      const hallazgosPct = totalAudits > 0 ? (totalDetails / totalAudits * 100) : 0;
 
-      // Sort breakdowns
-      const catSorted = Object.entries(detailByCategory).sort((a, b) => b[1] - a[1]);
-      const cleanerSorted = Object.entries(detailByCleaner).sort((a, b) => b[1] - a[1]);
+      // Flatten category breakdown to sorted array: [{cat, resp, count}]
+      const catFlat = [];
+      Object.keys(detailByCategory).sort().forEach(cat => {
+        Object.entries(detailByCategory[cat]).sort((a,b)=>b[1]-a[1]).forEach(([resp,cnt]) => {
+          catFlat.push([`${cat} — ${resp}`, cnt]);
+        });
+      });
 
-      // Build QA data object
+      // Flatten cleaner breakdown: [{cleaner, total, details:[{key,cnt}]}]
+      const cleanerFlat = Object.entries(detailByCleaner).map(([cleaner, cats]) => {
+        const total = Object.values(cats).reduce((a,b)=>a+b,0);
+        const details = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+        return [cleaner, total, details];
+      }).sort((a,b)=>b[1]-a[1]);
+
       const qaData = {
-        total: totalAudits,
-        sofia: sofiaN,
-        andrea: andreaaN,
-        hallazgos_pct: hallazgosPct,
+        total: totalAudits, sofia: sofiaN, andrea: andreaaN,
+        hallazgos_pct: parseFloat(hallazgosPct.toFixed(2)),
         total_details: totalDetails,
-        total_cells: totalCells,
-        by_category: catSorted,
-        by_cleaner: cleanerSorted
+        by_category: catFlat,
+        by_cleaner: cleanerFlat
       };
 
-      // Persist to appData
+      // Persist
       const data = loadData();
       const idx = data.meses.findIndex(m => m.mes === currentMes);
       if (idx >= 0) {
         data.meses[idx].qa = qaData;
         data.meses[idx].hosts = data.meses[idx].hosts || {};
-        data.meses[idx].hosts.aud_sofia = sofiaN;
-        data.meses[idx].hosts.aud_andrea = andreaaN;
-        data.meses[idx].hosts.aud_total = totalAudits;
+        data.meses[idx].hosts.aud_sofia   = sofiaN;
+        data.meses[idx].hosts.aud_andrea  = andreaaN;
+        data.meses[idx].hosts.aud_total   = totalAudits;
         data.meses[idx].hk = data.meses[idx].hk || {};
         data.meses[idx].hk.hallazgos = parseFloat(hallazgosPct.toFixed(2));
         saveData(data); appData = data;
       }
 
-      // Update form fields
       setVal('audSofia', sofiaN);
       setVal('audAndrea', andreaaN);
       setVal('audTotal', totalAudits);
       setVal('hallazgos', hallazgosPct.toFixed(2));
       refreshAuditShare();
 
-      showQAStatus(`✓ ${totalAudits} auditorías · Sofía: ${sofiaN} · Andrea: ${andreaaN} · ${totalDetails} detalles HK (${hallazgosPct.toFixed(1)}%)`, true);
+      showQAStatus(`✓ ${totalAudits} auditorías · Sofía: ${sofiaN} · Andrea: ${andreaaN} · ${totalDetails} detalles HK`, true);
+      renderQABreakdownCapture(qaData);
+      renderDashboard();
+      refreshPreview();
+
+    } catch (err) { showQAStatus('Error al procesar: ' + err.message, false); }
+  };
+  reader.readAsText(file, 'utf-8');
+}
       renderQABreakdownCapture(qaData);
       renderDashboard();
       refreshPreview();
@@ -1403,20 +1487,21 @@ function renderQABreakdownCapture(qa) {
   if (!qa) return;
   const el = document.getElementById('qaBreakdownCapture');
   if (!el) return;
-  const maxCat = qa.by_category.length ? qa.by_category[0][1] : 1;
-  const maxCln = qa.by_cleaner.length ? qa.by_cleaner[0][1] : 1;
+  const cats = qa.by_category || [];
+  const cleaners = qa.by_cleaner || [];
+  const maxCat = cats.length ? cats[0][1] : 1;
 
   el.innerHTML = `
     <div class="hk-breakdown">
-      <div class="hk-breakdown-title">Detalles HK por Categoría</div>
+      <div class="hk-breakdown-title">Detalles HK por Categoría — ${qa.total_details || 0} total</div>
       <table class="hk-table">
-        <thead><tr><th>Categoría</th><th style="text-align:right"># Detalles</th></tr></thead>
+        <thead><tr><th>Categoría — Detalle</th><th style="text-align:right">#</th></tr></thead>
         <tbody>
-          ${qa.by_category.map(([cat, n]) => `
+          ${cats.map(([key, n]) => `
             <tr><td>
               <div class="hk-bar-wrap">
                 <div class="hk-bar" style="width:${Math.round(n/maxCat*80)}px"></div>
-                <span>${cat}</span>
+                <span>${key}</span>
               </div>
             </td><td class="num">${n}</td></tr>`).join('')}
         </tbody>
@@ -1424,18 +1509,20 @@ function renderQABreakdownCapture(qa) {
     </div>
     <div class="hk-breakdown" style="margin-top:12px">
       <div class="hk-breakdown-title">Detalles HK por Integrante</div>
-      <table class="hk-table">
-        <thead><tr><th>Integrante</th><th style="text-align:right"># Detalles</th></tr></thead>
-        <tbody>
-          ${qa.by_cleaner.map(([name, n]) => `
-            <tr><td>
-              <div class="hk-bar-wrap">
-                <div class="hk-bar" style="width:${Math.round(n/maxCln*80)}px;background:var(--yellow)"></div>
-                <span>${name}</span>
-              </div>
-            </td><td class="num">${n}</td></tr>`).join('')}
-        </tbody>
-      </table>
+      ${cleaners.map(([name, total, details]) => `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--triver-navy);margin-bottom:4px">
+            ${name} — <span style="color:var(--triver-teal)">${total} detalles</span>
+          </div>
+          <table class="hk-table">
+            <thead><tr><th>Categoría — Detalle</th><th style="text-align:right">#</th></tr></thead>
+            <tbody>
+              ${details.map(([key, n]) => `
+                <tr><td style="font-size:11px;padding-left:12px">${key}</td>
+                <td class="num">${n}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`).join('')}
     </div>`;
 }
 
@@ -1445,20 +1532,21 @@ function renderHKDetail(md) {
   const qa = md && md.qa;
   if (!qa || !qa.total) { grid.innerHTML = ''; return; }
 
-  const maxCat = qa.by_category.length ? qa.by_category[0][1] : 1;
-  const maxCln = qa.by_cleaner.length ? qa.by_cleaner[0][1] : 1;
+  const cats = qa.by_category || [];
+  const cleaners = qa.by_cleaner || [];
+  const maxCat = cats.length ? cats[0][1] : 1;
 
   grid.innerHTML = `
     <div class="hk-detail-card">
-      <div class="hk-detail-card-title">Detalles por Categoría</div>
+      <div class="hk-detail-card-title">Detalles por Categoría — ${qa.total_details || 0} total</div>
       <table class="hk-table">
-        <thead><tr><th>Categoría</th><th style="text-align:right">#</th></tr></thead>
+        <thead><tr><th>Categoría — Detalle</th><th style="text-align:right">#</th></tr></thead>
         <tbody>
-          ${qa.by_category.map(([cat, n]) => `
+          ${cats.map(([key, n]) => `
             <tr><td>
               <div class="hk-bar-wrap">
                 <div class="hk-bar" style="width:${Math.round(n/maxCat*70)}px"></div>
-                <span style="font-size:11px">${cat}</span>
+                <span style="font-size:11px">${key}</span>
               </div>
             </td><td class="num">${n}</td></tr>`).join('')}
         </tbody>
@@ -1466,18 +1554,19 @@ function renderHKDetail(md) {
     </div>
     <div class="hk-detail-card">
       <div class="hk-detail-card-title">Detalles por Integrante</div>
-      <table class="hk-table">
-        <thead><tr><th>Integrante</th><th style="text-align:right">#</th></tr></thead>
-        <tbody>
-          ${qa.by_cleaner.map(([name, n]) => `
-            <tr><td>
-              <div class="hk-bar-wrap">
-                <div class="hk-bar" style="width:${Math.round(n/maxCln*70)}px;background:var(--yellow)"></div>
-                <span style="font-size:11px">${name}</span>
-              </div>
-            </td><td class="num">${n}</td></tr>`).join('')}
-        </tbody>
-      </table>
+      ${cleaners.map(([name, total, details]) => `
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--triver-navy);margin-bottom:3px">
+            ${name} <span style="color:var(--triver-teal);font-weight:400">(${total})</span>
+          </div>
+          <table class="hk-table">
+            <tbody>
+              ${details.map(([key, n]) => `
+                <tr><td style="font-size:10px;padding:4px 8px">${key}</td>
+                <td class="num" style="padding:4px 8px">${n}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`).join('')}
     </div>`;
 }
 
