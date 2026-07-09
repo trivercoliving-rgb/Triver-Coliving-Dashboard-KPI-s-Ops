@@ -1468,14 +1468,6 @@ function processQACSV(input) {
   };
   reader.readAsText(file, 'utf-8');
 }
-      renderQABreakdownCapture(qaData);
-      renderDashboard();
-      refreshPreview();
-
-    } catch (err) { showQAStatus('Error: ' + err.message, false); }
-  };
-  reader.readAsText(file, 'utf-8');
-}
 
 function showQAStatus(msg, ok) {
   const el = document.getElementById('qaStatus');
