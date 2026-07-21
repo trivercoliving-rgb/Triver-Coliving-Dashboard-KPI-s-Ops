@@ -640,11 +640,11 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr" id="hkPieGrid">
     <div class="chart-card">
       <div class="chart-header"><div class="chart-title">Check Out (Hab. + Hostales)</div></div>
-      <canvas id="pieCheckout" width="300" height="260"></canvas>
+      <canvas id="pieCheckout" style="width:100%;display:block"></canvas>
     </div>
     <div class="chart-card">
       <div class="chart-header"><div class="chart-title">Cortesías</div></div>
-      <canvas id="pieCortesias" width="300" height="260"></canvas>
+      <canvas id="pieCortesias" style="width:100%;display:block"></canvas>
     </div>
   </div>
 
@@ -2258,60 +2258,97 @@ function renderHKPies(){
 
   const COLORS = ['#168C95','#E26147','#F9A058','#38495D','#2DC98E','#8B6FE8'];
 
-  function drawPie(canvas, data, labels){
-    const W = canvas.width, H = canvas.height;
+  function drawPie(canvas, data, labels, title){
+    // Use device pixel ratio for sharp rendering
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth || 380;
+    const H = 320;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,W,H);
-    const total = data.reduce((a,b)=>a+b,0);
-    if(!total) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
 
-    const cx = W/2, cy = H*0.42, r = Math.min(W,H)*0.32;
+    const total = data.reduce((a,b)=>a+b, 0);
+    if(!total){ ctx.fillStyle='#6B7A8D'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Sin datos', W/2, H/2); return; }
+
+    // Title
+    ctx.fillStyle = '#263040';
+    ctx.font = 'bold 13px -apple-system,BlinkMacSystemFont,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText((title||'').toUpperCase(), 16, 14);
+
+    // Pie geometry
+    const cx = W/2, cy = H*0.52, r = Math.min(W, H) * 0.28;
+    const slices = [];
     let angle = -Math.PI/2;
-
-    data.forEach((val,i) => {
-      const slice = (val/total) * Math.PI*2;
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,angle,angle+slice);
-      ctx.closePath();
-      ctx.fillStyle = COLORS[i % COLORS.length];
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Label on slice
-      const mid = angle + slice/2;
-      const lx = cx + Math.cos(mid)*r*0.65;
-      const ly = cy + Math.sin(mid)*r*0.65;
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      if(val > 0) ctx.fillText(val, lx, ly);
-
-      angle += slice;
+    data.forEach((val, i) => {
+      const sweep = (val/total) * Math.PI*2;
+      slices.push({ val, label: labels[i], start: angle, sweep, mid: angle + sweep/2, color: COLORS[i%COLORS.length] });
+      angle += sweep;
     });
 
-    // Legend
-    const legendY = cy + r + 18;
-    const itemW = W / Math.min(data.length, 4);
-    data.forEach((val,i) => {
-      const lx = (i % 4) * itemW + itemW*0.1;
-      const ly = legendY + Math.floor(i/4)*20;
-      ctx.fillStyle = COLORS[i % COLORS.length];
-      ctx.fillRect(lx, ly, 10, 10);
+    // Draw slices
+    slices.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, s.start, s.start+s.sweep);
+      ctx.closePath();
+      ctx.fillStyle = s.color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    });
+
+    // Draw outer labels with connector lines
+    slices.forEach(s => {
+      const pct = ((s.val/total)*100).toFixed(1) + '%';
+      const onRight = Math.cos(s.mid) >= 0;
+
+      // Connector: inner point on pie edge, elbow, end point
+      const innerX = cx + Math.cos(s.mid) * r;
+      const innerY = cy + Math.sin(s.mid) * r;
+      const elbowX = cx + Math.cos(s.mid) * (r + 22);
+      const elbowY = cy + Math.sin(s.mid) * (r + 22);
+      const horizLen = 28;
+      const endX = elbowX + (onRight ? horizLen : -horizLen);
+      const endY = elbowY;
+
+      ctx.beginPath();
+      ctx.moveTo(innerX, innerY);
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Dot at elbow
+      ctx.beginPath();
+      ctx.arc(elbowX, elbowY, 2.5, 0, Math.PI*2);
+      ctx.fillStyle = '#999';
+      ctx.fill();
+
+      // Name label
+      ctx.textAlign = onRight ? 'left' : 'right';
+      ctx.textBaseline = 'bottom';
       ctx.fillStyle = '#263040';
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'left';
+      ctx.font = 'bold 11px -apple-system,BlinkMacSystemFont,sans-serif';
+      ctx.fillText(s.label, endX + (onRight ? 4 : -4), endY + 1);
+
+      // Pct label below name
       ctx.textBaseline = 'top';
-      const pct = Math.round(val/total*100);
-      ctx.fillText(`${labels[i]} (${pct}%)`, lx+13, ly);
+      ctx.fillStyle = '#6B7A8D';
+      ctx.font = '10px -apple-system,BlinkMacSystemFont,sans-serif';
+      ctx.fillText(pct, endX + (onRight ? 4 : -4), endY + 3);
     });
   }
 
-  drawPie(checkoutEl,  members.map(m=>m.checkout), members.map(m=>m.name));
-  drawPie(cortesiasEl, members.map(m=>m.cor),      members.map(m=>m.name));
+  drawPie(checkoutEl,  members.map(m=>m.checkout), members.map(m=>m.name), 'Limpiezas Check Out');
+  drawPie(cortesiasEl, members.map(m=>m.cor),      members.map(m=>m.name), 'Limpiezas Cortesías');
 
   // Summary cards
   const md2 = appData.meses.find(m=>m.mes===currentMes);
