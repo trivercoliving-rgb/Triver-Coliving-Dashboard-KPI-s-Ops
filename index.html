@@ -638,13 +638,13 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 
   <div class="section-label">Distribución por Integrante</div>
   <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr" id="hkPieGrid">
-    <div class="chart-card">
-      <div class="chart-header"><div class="chart-title">Check Out (Hab. + Hostales)</div></div>
-      <canvas id="pieCheckout" style="width:100%;display:block"></canvas>
+    <div class="chart-card" style="display:flex;gap:16px;align-items:flex-start">
+      <canvas id="pieCheckout" style="flex:1;min-width:0;display:block"></canvas>
+      <div id="pieCheckoutTable" style="flex-shrink:0;min-width:130px;padding-top:32px"></div>
     </div>
-    <div class="chart-card">
-      <div class="chart-header"><div class="chart-title">Cortesías</div></div>
-      <canvas id="pieCortesias" style="width:100%;display:block"></canvas>
+    <div class="chart-card" style="display:flex;gap:16px;align-items:flex-start">
+      <canvas id="pieCortesias" style="flex:1;min-width:0;display:block"></canvas>
+      <div id="pieCortesiasTable" style="flex-shrink:0;min-width:130px;padding-top:32px"></div>
     </div>
   </div>
 
@@ -2349,6 +2349,48 @@ function renderHKPies(){
 
   drawPie(checkoutEl,  members.map(m=>m.checkout), members.map(m=>m.name), 'Limpiezas Check Out');
   drawPie(cortesiasEl, members.map(m=>m.cor),      members.map(m=>m.name), 'Limpiezas Cortesías');
+
+  // Breakdown tables to the right of each pie
+  function buildTable(elId, valFn, totalVal){
+    const el = document.getElementById(elId);
+    if(!el) return;
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:4px 6px;color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--triver-teal)">Integrante</th>
+            <th style="text-align:right;padding:4px 6px;color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--triver-teal)">#</th>
+            <th style="text-align:right;padding:4px 6px;color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--triver-teal)">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${members.map((m,i) => {
+            const val = valFn(m);
+            const pct = totalVal > 0 ? (val/totalVal*100).toFixed(1) : '0.0';
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:5px 6px;display:flex;align-items:center;gap:6px">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></span>
+                ${m.name}
+              </td>
+              <td style="padding:5px 6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${val}</td>
+              <td style="padding:5px 6px;text-align:right;color:var(--muted)">${pct}%</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border)">
+            <td style="padding:5px 6px;font-weight:700">Total</td>
+            <td style="padding:5px 6px;text-align:right;font-weight:700">${totalVal}</td>
+            <td style="padding:5px 6px;text-align:right;color:var(--muted)">100%</td>
+          </tr>
+        </tfoot>
+      </table>`;
+  }
+
+  const totCO  = members.reduce((s,m)=>s+m.checkout,0);
+  const totCor = members.reduce((s,m)=>s+m.cor,0);
+  buildTable('pieCheckoutTable',  m=>m.checkout, totCO);
+  buildTable('pieCortesiasTable', m=>m.cor,      totCor);
 
   // Summary cards
   const md2 = appData.meses.find(m=>m.mes===currentMes);
