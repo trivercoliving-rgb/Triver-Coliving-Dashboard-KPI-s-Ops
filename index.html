@@ -979,9 +979,10 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
       <div class="source-body">
         <!-- Upload reporte limpiezas XLSX -->
         <div class="upload-zone" id="hkXlsxZone"
+          onclick="document.getElementById('hkXlsxFile').click()"
           ondragover="dragOver(event,'hkXlsxZone')" ondragleave="dragLeave('hkXlsxZone')"
-          ondrop="handleDrop(event,'hkXlsxZone',processHKXlsx)">
-          <input type="file" id="hkXlsxFile" accept=".xlsx,.xls" onchange="processHKXlsx(this)">
+          ondrop="dropFile(event,'hkXlsx')">
+          <input type="file" id="hkXlsxFile" accept=".xlsx,.xls" onchange="processHKXlsx(this)" style="display:none">
           <div class="upload-icon">📊</div>
           <div class="upload-label">Arrastra el reporte de limpiezas (.xlsx)<br><strong>Clic para seleccionar</strong></div>
           <div class="upload-status" id="hkXlsxStatus"></div>
@@ -3106,6 +3107,11 @@ function dragOver(e,id){e.preventDefault();document.getElementById(id).classList
 function dragLeave(id){document.getElementById(id).classList.remove('dragover');}
 function dropFile(e,type){
   e.preventDefault();const file=e.dataTransfer.files[0];if(!file)return;
+  if(type==='hkXlsx'){
+    const input=document.getElementById('hkXlsxFile');
+    const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
+    processHKXlsx(input);dragLeave('hkXlsxZone');return;
+  }
   if(type==='qa'){
     const input=document.getElementById('qaFile');
     const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;
