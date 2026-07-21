@@ -2034,174 +2034,197 @@ ${ytdTableHTML}
 // ── HK XLSX Processor (Reporte de Limpiezas) ──
 async function processHKXlsx(input){
   const file = input.files ? input.files[0] : input;
-  if(!file) return;
+  if(!file){ showHKXlsxStatus('No se seleccionó archivo.', false); return; }
   try {
+    showHKXlsxStatus('Leyendo archivo...', true);
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     const zip = await unzipXLSX(bytes);
-    if(!zip){ showHKXlsxStatus('No se pudo leer el archivo XLSX.', false); return; }
+    if(!zip || Object.keys(zip).length === 0){
+      showHKXlsxStatus('No se pudo leer el XLSX. Verifica que el archivo no esté corrupto.', false);
+      return;
+    }
     await parseXLSXGraficos(zip);
   } catch(err){
     showHKXlsxStatus('Error: ' + err.message, false);
+    console.error('HK XLSX error:', err);
   }
 }
 
 async function parseXLSXGraficos(zip){
-  // Minimal XLSX parser: find GRAFICOS sheet and extract summary row
-  // XLSX is a ZIP file — we look for the shared strings and sheet data
   try {
-    const bytes = new Uint8Array(buffer);
-    // Convert to string for text search (works for uncompressed XML parts)
-    // Use a proper approach: decompress ZIP entries
-    const zip = unzipXLSX(bytes);
-    if(!zip){ showHKXlsxStatus('No se pudo leer el archivo XLSX.', false); return; }
+    // 1. Get sheet names and rId mapping from workbook.xml
+    const wbXML = zip['xl/workbook.xml'] || '';
+    const sheetMatches = [...wbXML.matchAll(/<sheet\s[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g)];
+    // Also try reversed attribute order
+    const sheetMatches2 = [...wbXML.matchAll(/<sheet\s[^>]*r:id="([^"]+)"[^>]*name="([^"]+)"/g)]
+      .map(m => [m[0], m[2], m[1]]); // normalize to [full, name, rid]
+    const allSheets = [
+      ...sheetMatches.map(m => ({ name: m[1], rid: m[2] })),
+      ...sheetMatches2.map(m => ({ name: m[1], rid: m[2] }))
+    ].filter((s,i,a) => a.findIndex(x=>x.rid===s.rid)===i); // dedupe
 
-    // Find GRAFICOS sheet index
-    const wb = zip['xl/workbook.xml'];
-    if(!wb){ showHKXlsxStatus('Archivo XLSX inválido.', false); return; }
+    // 2. Find GRAFICOS sheet (last sheet or named GRAFICOS)
+    let targetSheet = allSheets.find(s => s.name.toUpperCase().includes('GRAFIC'));
+    if(!targetSheet) targetSheet = allSheets[allSheets.length-1];
+    if(!targetSheet){ showHKXlsxStatus('No se encontró la hoja GRAFICOS.', false); return; }
 
-    const sheetNames = [...wb.matchAll(/<sheet[^>]+name="([^"]+)"[^>]+r:id="([^"]+)"/g)]
-      .map(m => ({ name: m[1], rid: m[2] }));
+    // 3. Map rId to file via rels
+    const relsXML = zip['xl/_rels/workbook.xml.rels'] || '';
+    const relMatch = relsXML.match(new RegExp(`Id="${targetSheet.rid}"[^/]*/?>?\\s*Target="([^"]+)"`))
+                  || relsXML.match(new RegExp(`Target="([^"]+)"[^/]*/?>?\\s*Id="${targetSheet.rid}"`));
+    
+    // Fallback: last sheet file numerically
+    const allSheetFiles = Object.keys(zip)
+      .filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k))
+      .sort((a,b) => {
+        const na = parseInt(a.match(/\d+/)[0]), nb = parseInt(b.match(/\d+/)[0]);
+        return na - nb;
+      });
 
-    const graficosMeta = sheetNames.find(s => s.name.toUpperCase().includes('GRAFIC') || s.name.toUpperCase().includes('RESUMEN'));
-    if(!graficosMeta){
-      // Try last sheet
-      const last = sheetNames[sheetNames.length-1];
-      if(!last){ showHKXlsxStatus('No se encontró la hoja GRAFICOS.', false); return; }
-      graficosMeta || (graficosMeta = last);
+    let sheetFile;
+    if(relMatch){
+      sheetFile = 'xl/' + relMatch[1].replace(/^\.\.\//, '');
+    } else {
+      sheetFile = allSheetFiles[allSheetFiles.length - 1];
     }
 
-    // Get sheet relationship
-    const rels = zip['xl/_rels/workbook.xml.rels'] || '';
-    const relMatch = rels.match(new RegExp(`Id="${graficosMeta.rid}"[^>]+Target="([^"]+)"`));
-    const sheetPath = relMatch ? 'xl/' + relMatch[1] : null;
+    const sheetXML = zip[sheetFile];
+    if(!sheetXML){ showHKXlsxStatus(`No se encontró la hoja: ${sheetFile}`, false); return; }
 
-    // Try all sheets — parse GRAFICOS
-    const sheetKey = sheetPath || Object.keys(zip).find(k => k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml') && zip[k]);
-    // Find the last sheet (GRAFICOS is always last)
-    const allSheets = Object.keys(zip).filter(k => /xl\/worksheets\/sheet\d+\.xml/.test(k)).sort();
-    const graficoSheet = zip[allSheets[allSheets.length-1]];
-    if(!graficoSheet){ showHKXlsxStatus('No se encontró la hoja de resumen.', false); return; }
+    // 4. Parse shared strings
+    const ssXML = zip['xl/sharedStrings.xml'] || '';
+    const strings = [...ssXML.matchAll(/<t(?:\s[^>]*)?>([^<]*)<\/t>/g)].map(m => decodeXMLEntities(m[1]));
 
-    const ss = zip['xl/sharedStrings.xml'] || '';
-    const strings = [...ss.matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map(m => decodeXMLEntities(m[1]));
-
-    function cellVal(cellXML){
-      const t = (cellXML.match(/t="([^"]+)"/) || [])[1];
-      const v = (cellXML.match(/<v>([^<]+)<\/v>/) || [])[1];
-      if(!v) return '';
+    // 5. Parse rows from GRAFICOS sheet
+    function getCellValue(cellXML){
+      const t = (cellXML.match(/\bt="([^"]+)"/) || [])[1];
+      const v = (cellXML.match(/<v>([^<]*)<\/v>/) || [])[1];
+      if(v === undefined || v === null) return '';
       if(t === 's') return strings[parseInt(v)] || '';
       return v;
     }
 
-    // Parse rows
     const rows = [];
-    const rowMatches = [...graficoSheet.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)];
-    rowMatches.forEach(rm => {
-      const cells = [...rm[1].matchAll(/<c[^>]*r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)];
+    const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+    let rm;
+    while((rm = rowRe.exec(sheetXML)) !== null){
+      const cellRe = /<c\b[^>]*r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g;
+      let cm;
       const row = {};
-      cells.forEach(cm => { row[cm[1]] = cellVal(cm[0]); });
-      rows.push(row);
-    });
+      while((cm = cellRe.exec(rm[1])) !== null){
+        row[cm[1]] = getCellValue(cm[0]);
+      }
+      if(Object.keys(row).length) rows.push(row);
+    }
 
-    // Find data rows: A=name, B=habitaciones, C=hostales, D=cortesias, E=total
-    // Skip header row (A contains 'NOMBRE' or similar)
+    // 6. Extract member data: skip header row (A='NOMBRE'), skip TOTAL row
     const members = [];
-    let totalRow = null;
+    let totalCheckout = 0, totalCortesias = 0;
+
     rows.forEach(r => {
       const name = (r['A'] || '').trim();
-      const hab  = parseFloat(r['B']) || 0;
-      const hos  = parseFloat(r['C']) || 0;
-      const cor  = parseFloat(r['D']) || 0;
-      const tot  = parseFloat(r['E']) || 0;
-      if(!name || name.toUpperCase().includes('NOMBRE') || name.toUpperCase().includes('NOM')) return;
+      if(!name || name.toUpperCase() === 'NOMBRE') return;
+      const hab = parseFloat(r['B']) || 0;
+      const hos = parseFloat(r['C']) || 0;
+      const cor = parseFloat(r['D']) || 0;
       if(name.toUpperCase() === 'TOTAL'){
-        totalRow = { hab, hos, cor, tot };
-      } else if(name && (hab+hos+cor+tot > 0)){
-        members.push({ name: name.replace(/^\d+[-.\s]+/, '').trim(), hab, hos, cor, checkout: hab+hos, total: hab+hos+cor });
+        totalCheckout  = hab + hos;
+        totalCortesias = cor;
+        return;
+      }
+      if(hab + hos + cor > 0){
+        members.push({
+          name: name.replace(/^\d+[-.\s]+/, '').trim(),
+          hab, hos, cor,
+          checkout: hab + hos,
+          total: hab + hos + cor
+        });
       }
     });
 
-    if(!members.length){ showHKXlsxStatus('No se encontraron datos de integrantes.', false); return; }
+    if(!members.length){ showHKXlsxStatus('No se encontraron datos de integrantes en la hoja GRAFICOS.', false); return; }
 
-    const totalCheckout  = members.reduce((s,m) => s+m.checkout, 0);
-    const totalCortesias = members.reduce((s,m) => s+m.cor, 0);
+    // Recalculate totals from members if TOTAL row missing
+    if(!totalCheckout)  totalCheckout  = members.reduce((s,m) => s+m.checkout, 0);
+    if(!totalCortesias) totalCortesias = members.reduce((s,m) => s+m.cor, 0);
     const totalLimpiezas = totalCheckout + totalCortesias;
 
-    // Save to data model
+    // 7. Save to data model
     const data = loadData();
     const idx = data.meses.findIndex(m => m.mes === currentMes);
     if(idx >= 0){
       data.meses[idx].hk = data.meses[idx].hk || {};
-      data.meses[idx].hk.limpiezas  = totalLimpiezas;
-      data.meses[idx].hk.checkout   = totalCheckout;
-      data.meses[idx].hk.cortesias  = totalCortesias;
-      data.meses[idx].hk.by_member  = members;
+      data.meses[idx].hk.limpiezas = totalLimpiezas;
+      data.meses[idx].hk.checkout  = totalCheckout;
+      data.meses[idx].hk.cortesias = totalCortesias;
+      data.meses[idx].hk.by_member = members;
       saveData(data); appData = data;
     }
 
     setVal('limpiezas', totalLimpiezas);
     refreshPreview();
     renderDashboard();
+    setTimeout(renderHKPies, 100);
 
-    showHKXlsxStatus(`✓ ${totalLimpiezas} limpiezas · Check Out: ${totalCheckout} · Cortesías: ${totalCortesias} · ${members.length} integrantes`, true);
+    showHKXlsxStatus(
+      `✓ ${totalLimpiezas} limpiezas · Check Out: ${totalCheckout} · Cortesías: ${totalCortesias} · ${members.length} integrantes`,
+      true
+    );
 
   } catch(err){
     showHKXlsxStatus('Error al procesar: ' + err.message, false);
+    console.error('parseXLSXGraficos error:', err);
   }
 }
 
 function decodeXMLEntities(s){
-  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+  return (s||'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
 }
 
 async function unzipXLSX(bytes){
-  try {
-    const files = {};
-    let i = 0;
-    const tasks = [];
-    while(i < bytes.length - 4){
-      if(bytes[i]===0x50 && bytes[i+1]===0x4B && bytes[i+2]===0x03 && bytes[i+3]===0x04){
-        const compression = bytes[i+8]  | (bytes[i+9]<<8);
-        const compSize    = bytes[i+18] | (bytes[i+19]<<8) | (bytes[i+20]<<16) | (bytes[i+21]<<24);
-        const fnLen       = bytes[i+26] | (bytes[i+27]<<8);
-        const extraLen    = bytes[i+28] | (bytes[i+29]<<8);
-        const fnStart     = i + 30;
-        const fname       = new TextDecoder().decode(bytes.slice(fnStart, fnStart+fnLen));
-        const dataStart   = fnStart + fnLen + extraLen;
-        const dataEnd     = dataStart + compSize;
-        if(fname.endsWith('.xml') || fname.endsWith('.rels')){
-          const chunk = bytes.slice(dataStart, dataEnd);
-          if(compression === 0){
-            files[fname] = new TextDecoder().decode(chunk);
-          } else if(compression === 8){
-            tasks.push((async () => {
-              try {
-                const ds = new DecompressionStream('deflate-raw');
-                const writer = ds.writable.getWriter();
-                const reader2 = ds.readable.getReader();
-                writer.write(chunk);
-                writer.close();
-                const chunks = [];
-                while(true){
-                  const {done,value} = await reader2.read();
-                  if(done) break;
-                  chunks.push(value);
-                }
-                const total = chunks.reduce((a,b)=>a+b.length,0);
-                const out = new Uint8Array(total);
-                let off=0; chunks.forEach(c=>{out.set(c,off);off+=c.length;});
-                files[fname] = new TextDecoder().decode(out);
-              } catch(e){}
-            })());
-          }
+  const files = {};
+  const tasks = [];
+  let i = 0;
+  while(i < bytes.length - 30){
+    // Local file header signature
+    if(bytes[i]===0x50 && bytes[i+1]===0x4B && bytes[i+2]===0x03 && bytes[i+3]===0x04){
+      const compression = bytes[i+8]  | (bytes[i+9]<<8);
+      const compSize    = bytes[i+18] | (bytes[i+19]<<8) | (bytes[i+20]<<16) | (bytes[i+21]<<24);
+      const fnLen       = bytes[i+26] | (bytes[i+27]<<8);
+      const extraLen    = bytes[i+28] | (bytes[i+29]<<8);
+      const dataStart   = i + 30 + fnLen + extraLen;
+      const dataEnd     = dataStart + compSize;
+      const fname       = new TextDecoder('utf-8').decode(bytes.slice(i+30, i+30+fnLen));
+
+      if((fname.endsWith('.xml') || fname.endsWith('.rels')) && compSize > 0){
+        const chunk = bytes.slice(dataStart, dataEnd);
+        if(compression === 0){
+          files[fname] = new TextDecoder('utf-8').decode(chunk);
+        } else if(compression === 8){
+          const f = fname;
+          const c = new Uint8Array(chunk);
+          tasks.push((async()=>{
+            try {
+              const ds = new DecompressionStream('deflate-raw');
+              const w = ds.writable.getWriter();
+              const r = ds.readable.getReader();
+              w.write(c); w.close();
+              const parts = [];
+              while(true){const{done,value}=await r.read();if(done)break;parts.push(value);}
+              const len = parts.reduce((a,b)=>a+b.length,0);
+              const out = new Uint8Array(len);
+              let off=0;parts.forEach(p=>{out.set(p,off);off+=p.length;});
+              files[f] = new TextDecoder('utf-8').decode(out);
+            } catch(e){ console.warn('Decompress failed for', f, e); }
+          })());
         }
-        i = dataEnd;
-      } else { i++; }
-    }
-    await Promise.all(tasks);
-    return Object.keys(files).length > 0 ? files : null;
-  } catch(e){ return null; }
+      }
+      i = dataEnd > i+30 ? dataEnd : i+1;
+    } else { i++; }
+  }
+  await Promise.all(tasks);
+  return files;
 }
 
 function showHKXlsxStatus(msg, ok){
