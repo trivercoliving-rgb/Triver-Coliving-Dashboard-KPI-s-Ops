@@ -653,7 +653,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   <div class="section-label">Resumen Limpiezas del Mes <button class="btn-export-png" onclick="exportPNG('hkLimpiCards')">⬇ PNG</button></div>
   <div class="cards-grid" id="hkLimpiCards"></div>
 
-  <div class="section-label">Distribución por Integrante <button class="btn-export-png" onclick="exportPNG('hkPieGrid')">⬇ PNG</button></div>
+  <div class="section-label">Distribución por Integrante <button class="btn-export-png" onclick="exportHKPies()">⬇ PNG</button></div>
   <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr" id="hkPieGrid">
     <div class="chart-card" style="display:flex;gap:16px;align-items:flex-start">
       <canvas id="pieCheckout" style="flex:1;min-width:0;display:block"></canvas>
@@ -2049,6 +2049,25 @@ ${ytdTableHTML}
   win.document.close();
 }
 
+
+function exportHKPies(){
+  const month = currentMes ? currentMes.replace(' ','_') : 'export';
+  ['pieCheckout','pieCortesias'].forEach((id, i) => {
+    const c = document.getElementById(id);
+    if(!c) return;
+    setTimeout(() => {
+      c.toBlob(b => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = 'Triver_' + id + '_' + month + '.png';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+    }, i * 400);
+  });
+  showToast('2 PNGs exportados ✓');
+}
+
 // ── EXPORT PNG ──
 function exportPNG(elementId){
   const el = document.getElementById(elementId);
@@ -2391,91 +2410,128 @@ function renderHKPies(){
   const COLORS = ['#168C95','#E26147','#F9A058','#38495D','#2DC98E','#8B6FE8'];
 
   function drawPie(canvas, data, labels, title){
-    // Use device pixel ratio for sharp rendering
     const dpr = window.devicePixelRatio || 1;
-    const W = canvas.offsetWidth || 380;
-    const H = 320;
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width  = W + 'px';
+    const W = canvas.parentElement ? canvas.parentElement.clientWidth * 0.55 : 340;
+    const H = 300;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width  = Math.round(W) + 'px';
     canvas.style.height = H + 'px';
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
 
-    const total = data.reduce((a,b)=>a+b, 0);
-    if(!total){ ctx.fillStyle='#6B7A8D'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Sin datos', W/2, H/2); return; }
+    // Filter out zero-value slices
+    const filtered = data.map((v,i) => ({v, label: labels[i], color: COLORS[i%COLORS.length]}))
+                         .filter(d => d.v > 0);
+    const total = filtered.reduce((a,b) => a + b.v, 0);
+
+    if(!total){
+      ctx.fillStyle = '#6B7A8D';
+      ctx.font = '12px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Sin datos', W/2, H/2);
+      return;
+    }
 
     // Title
     ctx.fillStyle = '#263040';
-    ctx.font = 'bold 13px -apple-system,BlinkMacSystemFont,sans-serif';
+    ctx.font = 'bold 12px -apple-system,BlinkMacSystemFont,sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText((title||'').toUpperCase(), 16, 14);
+    ctx.fillText((title||'').toUpperCase(), 8, 8);
 
-    // Pie geometry
-    const cx = W/2, cy = H*0.52, r = Math.min(W, H) * 0.28;
+    // Pie geometry — centered with padding for outside labels
+    const padX = 60, padTop = 30, padBot = 20;
+    const cx = W / 2;
+    const cy = padTop + (H - padTop - padBot) / 2;
+    const r  = Math.min(W - padX*2, H - padTop - padBot) / 2 * 0.82;
+
+    // Compute slices
     const slices = [];
-    let angle = -Math.PI/2;
-    data.forEach((val, i) => {
-      const sweep = (val/total) * Math.PI*2;
-      slices.push({ val, label: labels[i], start: angle, sweep, mid: angle + sweep/2, color: COLORS[i%COLORS.length] });
+    let angle = -Math.PI / 2;
+    filtered.forEach(d => {
+      const sweep = (d.v / total) * Math.PI * 2;
+      slices.push({ v: d.v, label: d.label, color: d.color,
+                    start: angle, sweep, mid: angle + sweep / 2 });
       angle += sweep;
     });
 
-    // Draw slices
+    // Draw wedges
     slices.forEach(s => {
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, s.start, s.start+s.sweep);
+      ctx.arc(cx, cy, r, s.start, s.start + s.sweep);
       ctx.closePath();
       ctx.fillStyle = s.color;
       ctx.fill();
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
     });
 
-    // Draw outer labels with connector lines
+    // Outside labels with collision avoidance
+    // Separate slices into left and right halves, sort by Y, space them out
+    const labelH = 22; // vertical space per label pair (name + pct)
+    const groups = { left: [], right: [] };
     slices.forEach(s => {
-      const pct = ((s.val/total)*100).toFixed(1) + '%';
       const onRight = Math.cos(s.mid) >= 0;
+      const elbowX = cx + Math.cos(s.mid) * (r + 18);
+      const elbowY = cy + Math.sin(s.mid) * (r + 18);
+      groups[onRight ? 'right' : 'left'].push({ ...s, elbowX, elbowY, onRight });
+    });
 
-      // Connector: inner point on pie edge, elbow, end point
+    // Sort each group by natural Y position
+    ['left','right'].forEach(side => {
+      groups[side].sort((a,b) => a.elbowY - b.elbowY);
+      // Space out to avoid overlaps
+      for(let i = 1; i < groups[side].length; i++){
+        const prev = groups[side][i-1];
+        const curr = groups[side][i];
+        if(curr.elbowY - prev.elbowY < labelH){
+          curr.elbowY = prev.elbowY + labelH;
+        }
+      }
+    });
+
+    // Draw connectors and labels
+    [...groups.left, ...groups.right].forEach(s => {
       const innerX = cx + Math.cos(s.mid) * r;
       const innerY = cy + Math.sin(s.mid) * r;
-      const elbowX = cx + Math.cos(s.mid) * (r + 22);
-      const elbowY = cy + Math.sin(s.mid) * (r + 22);
-      const horizLen = 28;
-      const endX = elbowX + (onRight ? horizLen : -horizLen);
-      const endY = elbowY;
+      const horizLen = 22;
+      const endX = s.elbowX + (s.onRight ? horizLen : -horizLen);
+      const endY = s.elbowY;
 
+      // Connector
       ctx.beginPath();
       ctx.moveTo(innerX, innerY);
-      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(s.elbowX, s.elbowY);
       ctx.lineTo(endX, endY);
-      ctx.strokeStyle = '#999';
+      ctx.strokeStyle = '#aaa';
       ctx.lineWidth = 1;
       ctx.stroke();
 
       // Dot at elbow
       ctx.beginPath();
-      ctx.arc(elbowX, elbowY, 2.5, 0, Math.PI*2);
-      ctx.fillStyle = '#999';
+      ctx.arc(s.elbowX, s.elbowY, 2, 0, Math.PI*2);
+      ctx.fillStyle = '#aaa';
       ctx.fill();
 
-      // Name label
-      ctx.textAlign = onRight ? 'left' : 'right';
+      // Name
+      const pct = ((s.v / total) * 100).toFixed(1) + '%';
+      const tx = endX + (s.onRight ? 4 : -4);
+      ctx.textAlign = s.onRight ? 'left' : 'right';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = '#263040';
-      ctx.font = 'bold 11px -apple-system,BlinkMacSystemFont,sans-serif';
-      ctx.fillText(s.label, endX + (onRight ? 4 : -4), endY + 1);
+      ctx.font = 'bold 10px -apple-system,BlinkMacSystemFont,sans-serif';
+      ctx.fillText(s.label, tx, endY + 1);
 
-      // Pct label below name
+      // Pct
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#6B7A8D';
       ctx.font = '10px -apple-system,BlinkMacSystemFont,sans-serif';
-      ctx.fillText(pct, endX + (onRight ? 4 : -4), endY + 3);
+      ctx.fillText(pct, tx, endY + 3);
     });
   }
 
