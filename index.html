@@ -2431,7 +2431,7 @@ function renderHKPies(){
   function drawPie(canvas, data, labels, title){
     const dpr = window.devicePixelRatio || 1;
     const container = canvas.parentElement;
-    const W = Math.max(200, container ? Math.min(container.clientWidth * 0.58, 360) : 320);
+    const W = Math.max(220, container ? Math.min(container.clientWidth * 0.62, 400) : 320);
     const H = Math.round(W * 1.05);
     canvas.width  = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
@@ -2463,7 +2463,7 @@ function renderHKPies(){
     ctx.fillText((title||'').toUpperCase(), 8, 8);
 
     // Pie - leave room for outside labels
-    const pad = 48;
+    const pad = 64;
     const cx = W / 2;
     const cy = H / 2 + 8;
     const r  = Math.max(20, Math.min(W - pad*2, H - pad*2) / 2);
@@ -3310,14 +3310,16 @@ function saveAllCapture(){
              aud_total:parseInt(document.getElementById('audTotal').value)||null };
 
   // HK — hallazgos comes from QA CSV (readonly field)
-  m.hk={ limpiezas:parseInt(document.getElementById('limpiezas').value)||null,
-          hallazgos:parseFloat(document.getElementById('hallazgos').value)||null };
+  m.hk = m.hk || {};
+  m.hk.limpiezas = parseInt(document.getElementById('limpiezas').value)||null;
+  m.hk.hallazgos = parseFloat(document.getElementById('hallazgos').value)||null;
 
   // Mant
   m.mant={ tiempo:parseFloat(document.getElementById('mantTiempo').value)||null, cumplimiento:parseFloat(document.getElementById('mantCumplimiento').value)||null };
 
   saveData(data);appData=data;
   renderDashboard();renderChart();
+  setTimeout(renderHKPies,300);
   showToast('Datos guardados correctamente');
   setTimeout(()=>showToast('💾 Recuerda exportar tu backup desde el botón ⬇ Exportar'),3500);
 }
