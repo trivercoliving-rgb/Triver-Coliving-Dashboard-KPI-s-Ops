@@ -2329,7 +2329,7 @@ async function parseXLSXGraficos(zip){
     setVal('limpiezas', totalLimpiezas);
     refreshPreview();
     renderDashboard();
-    setTimeout(renderHKPies, 100);
+    setTimeout(renderHKPies, 300);
 
     showHKXlsxStatus(
       `✓ ${totalLimpiezas} limpiezas · Check Out: ${totalCheckout} · Cortesías: ${totalCortesias} · ${members.length} integrantes`,
@@ -2535,6 +2535,11 @@ function renderHKPies(){
     });
   }
 
+  // Ensure canvas is visible and has layout before drawing
+  if(!checkoutEl.offsetWidth){
+    setTimeout(renderHKPies, 400);
+    return;
+  }
   drawPie(checkoutEl,  members.map(m=>m.checkout), members.map(m=>m.name), 'Limpiezas Check Out');
   drawPie(cortesiasEl, members.map(m=>m.cor),      members.map(m=>m.name), 'Limpiezas Cortesías');
 
@@ -3365,7 +3370,7 @@ function switchTab(name,btn){
   if(name==='capture')updateCaptureTab();
   if(name==='dashboard'){renderDashboard();setTimeout(renderChart,50);}
   if(name==='staff'||name==='housekeeping') renderDashboard();
-  if(name==='housekeeping') setTimeout(renderHKPies, 50);
+  if(name==='housekeeping') setTimeout(renderHKPies, 200);
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
