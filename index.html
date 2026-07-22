@@ -2270,21 +2270,34 @@ async function parseXLSXGraficos(zip){
       if(Object.keys(row).length) rows.push(row);
     }
 
-    // 6. Extract member data: skip header row (A='NOMBRE'), skip TOTAL row
+    // 6. Extract member data — ONLY from the primary block
+    // Primary block: starts after header row (A='NOMBRE'), ends at first blank/stop row
+    // Handles: duplicate headers (enero), secondary aux blocks (feb-abr), trailing totals
+    const STOP_WORDS = new Set(['total','sub total','habitaciones','hostales','cortesias']);
     const members = [];
     let totalCheckout = 0, totalCortesias = 0;
+    let headerCount = 0;
 
-    rows.forEach(r => {
+    for(const r of rows){
       const name = (r['A'] || '').trim();
-      if(!name || name.toUpperCase() === 'NOMBRE') return;
+      const nameLower = name.toLowerCase().replace(/\s+/g,' ');
+
+      // Skip header rows (may appear twice in enero)
+      if(nameLower === 'nombre'){ headerCount++; continue; }
+
+      // Only process after we've seen at least one header
+      if(headerCount === 0) continue;
+
+      // Stop at secondary blocks or summary rows
+      if(STOP_WORDS.has(nameLower)) break;
+
+      // Stop at empty name
+      if(!name) break;
+
       const hab = parseFloat(r['B']) || 0;
       const hos = parseFloat(r['C']) || 0;
       const cor = parseFloat(r['D']) || 0;
-      if(name.toUpperCase() === 'TOTAL'){
-        totalCheckout  = hab + hos;
-        totalCortesias = cor;
-        return;
-      }
+
       if(hab + hos + cor > 0){
         members.push({
           name: name.replace(/^\d+[-.\s]+/, '').trim(),
@@ -2293,13 +2306,12 @@ async function parseXLSXGraficos(zip){
           total: hab + hos + cor
         });
       }
-    });
+    }
 
     if(!members.length){ showHKXlsxStatus('No se encontraron datos de integrantes en la hoja GRAFICOS.', false); return; }
 
-    // Recalculate totals from members if TOTAL row missing
-    if(!totalCheckout)  totalCheckout  = members.reduce((s,m) => s+m.checkout, 0);
-    if(!totalCortesias) totalCortesias = members.reduce((s,m) => s+m.cor, 0);
+    totalCheckout  = members.reduce((s,m) => s + m.checkout, 0);
+    totalCortesias = members.reduce((s,m) => s + m.cor, 0);
     const totalLimpiezas = totalCheckout + totalCortesias;
 
     // 7. Save to data model
