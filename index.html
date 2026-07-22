@@ -2425,7 +2425,7 @@ function renderHKPies(){
     const dpr = window.devicePixelRatio || 1;
     const container = canvas.parentElement;
     const W = Math.max(200, container ? Math.min(container.clientWidth * 0.58, 360) : 320);
-    const H = Math.round(W * 0.88);
+    const H = Math.round(W * 1.05);
     canvas.width  = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     canvas.style.width  = Math.round(W) + 'px';
@@ -2456,7 +2456,7 @@ function renderHKPies(){
     ctx.fillText((title||'').toUpperCase(), 8, 8);
 
     // Pie - leave room for outside labels
-    const pad = 52;
+    const pad = 48;
     const cx = W / 2;
     const cy = H / 2 + 8;
     const r  = Math.max(20, Math.min(W - pad*2, H - pad*2) / 2);
