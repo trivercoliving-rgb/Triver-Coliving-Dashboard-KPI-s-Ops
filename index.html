@@ -960,7 +960,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
           </div>
           <div class="field-wrap">
             <label>% Auditorías QA completadas</label>
-            <input type="number" id="qaCompletion" min="0" max="100" step="0.1" placeholder="55" oninput="refreshPreview()" title="Se calcula automáticamente desde el CSV">
+            <input type="number" id="qaCompletion" readonly style="opacity:.7" min="0" max="100" step="0.1" placeholder="55" oninput="refreshPreview()" title="Se calcula automáticamente desde el CSV">
             <span class="hint">Meta: &gt; 50% · Se calcula desde CSV</span>
           </div>
           <div class="field-wrap">
@@ -1330,7 +1330,7 @@ function renderDashboard(){
   document.getElementById('hostsCards').innerHTML=
     mkCard('Staff Score',staff!=null?staff.toFixed(2):'—',`YTD ${staffBase.toFixed(2)}`,staffSem,sD,'Meta: YTD Staff +0.03 pts')+
     mkCard('Response Time',hosts.response_time!=null?hosts.response_time.toFixed(0)+' min':'—','Fuente: Whistle',rtSem,null,'Meta: ≤ 60 min')+
-    mkCard('% Auditorías QA',hosts.qa_completion!=null?hosts.qa_completion.toFixed(1)+'%':'—','',qaSem,null,'Meta: > 50%');
+    mkCard('% Auditorías QA',hosts.qa_completion!=null?hosts.qa_completion.toFixed(1)+'%':'—','',qaSem,null,'Meta: > 50% · Total Aud / Limpiezas Check Out');
 
   // Staff tab — Share cards
   const staffShareEl = document.getElementById('staffShareCards');
@@ -1584,6 +1584,9 @@ function processQACSV(input) {
         data.meses[idx].hosts.aud_total   = totalAudits;
         data.meses[idx].hk = data.meses[idx].hk || {};
         data.meses[idx].hk.hallazgos = parseFloat(hallazgosPct.toFixed(2));
+        // Auto-calculate % Auditorías QA = total audits / checkout limpiezas
+        const _checkout = (data.meses[idx].hk.checkout) || 0;
+        if(_checkout > 0) data.meses[idx].hosts.qa_completion = parseFloat((totalAudits / _checkout * 100).toFixed(2));
         saveData(data); appData = data;
       }
 
@@ -2323,6 +2326,10 @@ async function parseXLSXGraficos(zip){
       data.meses[idx].hk.checkout  = totalCheckout;
       data.meses[idx].hk.cortesias = totalCortesias;
       data.meses[idx].hk.by_member = members;
+      // Auto-calculate % Auditorías QA = total audits / checkout limpiezas
+      const _audTotal = (data.meses[idx].hosts && data.meses[idx].hosts.aud_total) || 0;
+      if(totalCheckout > 0 && _audTotal > 0)
+        data.meses[idx].hosts.qa_completion = parseFloat((_audTotal / totalCheckout * 100).toFixed(2));
       saveData(data); appData = data;
     }
 
