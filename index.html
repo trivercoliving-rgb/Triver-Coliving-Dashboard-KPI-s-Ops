@@ -2424,7 +2424,7 @@ function renderHKPies(){
   function drawPie(canvas, data, labels, title){
     const dpr = window.devicePixelRatio || 1;
     const container = canvas.parentElement;
-    const W = container ? Math.min(container.clientWidth * 0.58, 360) : 320;
+    const W = Math.max(200, container ? Math.min(container.clientWidth * 0.58, 360) : 320);
     const H = Math.round(W * 0.88);
     canvas.width  = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
@@ -2459,7 +2459,7 @@ function renderHKPies(){
     const pad = 52;
     const cx = W / 2;
     const cy = H / 2 + 8;
-    const r  = Math.min(W - pad*2, H - pad*2) / 2;
+    const r  = Math.max(20, Math.min(W - pad*2, H - pad*2) / 2);
 
     // Compute slices
     const slices = [];
