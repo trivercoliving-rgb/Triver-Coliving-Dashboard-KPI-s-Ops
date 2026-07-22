@@ -2509,16 +2509,24 @@ function renderHKPies(){
       }
     });
 
+    // Measure max label width to ensure nothing clips
+    ctx.font = 'bold 10px -apple-system,BlinkMacSystemFont,sans-serif';
+    const maxLabelW = Math.max(...filtered.map(d => ctx.measureText(d.label).width)) + 4;
+    const horizLen = Math.min(20, pad - maxLabelW - 6);
+
     [...groups.left, ...groups.right].forEach(s => {
       const innerX = cx + Math.cos(s.mid) * r;
       const innerY = cy + Math.sin(s.mid) * r;
-      const horizLen = 20;
       const endX = s.elbowX + (s.onRight ? horizLen : -horizLen);
+      // Clamp endX within canvas
+      const clampedEndX = s.onRight
+        ? Math.min(endX, W - maxLabelW - 4)
+        : Math.max(endX, maxLabelW + 4);
 
       ctx.beginPath();
       ctx.moveTo(innerX, innerY);
       ctx.lineTo(s.elbowX, s.elbowY);
-      ctx.lineTo(endX, s.elbowY);
+      ctx.lineTo(clampedEndX, s.elbowY);
       ctx.strokeStyle = '#aaa';
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -2529,7 +2537,7 @@ function renderHKPies(){
       ctx.fill();
 
       const pct = ((s.v / total) * 100).toFixed(1) + '%';
-      const tx = endX + (s.onRight ? 4 : -4);
+      const tx = clampedEndX + (s.onRight ? 4 : -4);
       ctx.textAlign = s.onRight ? 'left' : 'right';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = '#263040';
