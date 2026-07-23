@@ -2711,19 +2711,26 @@ function renderAcumTable(){
   ];
 
   // Triver row: weighted avg of all channel acums
-  function triverAcum(k){
+  function triverAcum(k, monthObj){
     const s = k.sources;
+    // Use stored acum.reviews (historical total) when available, matched
+    // to the SAME month the score in k came from (monthObj), not the
+    // globally-selected currentMes. Fall back to ytdRevByChannel / count.
+    const getRev = (channelKey, ytdVal, monthlyVal) => {
+      const acumRev = monthObj && monthObj[channelKey] && monthObj[channelKey].acum && monthObj[channelKey].acum.reviews;
+      return acumRev || ytdVal || monthlyVal || 1;
+    };
     return wavg([
-      {score:s.airbnb.acum,  count:ytdRevByChannel.airbnb  || s.airbnb.count  || 1},
-      {score:s.booking.acum, count:ytdRevByChannel.booking || s.booking.count || 1},
-      {score:s.expedia.acum, count:ytdRevByChannel.expedia || s.expedia.count || 1},
-      {score:s.google.acum,  count:ytdRevByChannel.google  || s.google.count  || 1},
-      {score:s.hw.acum,      count:ytdRevByChannel.hw      || s.hw.count      || 1},
+      {score:s.airbnb.acum,  count:getRev('airbnb',  ytdRevByChannel.airbnb,  s.airbnb.count)},
+      {score:s.booking.acum, count:getRev('booking', ytdRevByChannel.booking, s.booking.count)},
+      {score:s.expedia.acum, count:getRev('expedia', ytdRevByChannel.expedia, s.expedia.count)},
+      {score:s.google.acum,  count:getRev('google',  ytdRevByChannel.google,  s.google.count)},
+      {score:s.hw.acum,      count:getRev('hw',      ytdRevByChannel.hw,      s.hw.count)},
     ]);
   }
 
-  const tvCurr = triverAcum(kCurr);
-  const tvPrev = kPrev ? triverAcum(kPrev) : null;
+  const tvCurr = triverAcum(kCurr, md);
+  const tvPrev = kPrev ? triverAcum(kPrev, prevMes) : null;
   const tvYTD  = Object.values(ytdRevByChannel).reduce((a,b)=>a+b,0);
 
   // Build rows
