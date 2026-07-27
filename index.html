@@ -644,6 +644,36 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
 <main>
   <div class="section-label">Share de Auditorías — Hosts</div>
   <div class="cards-grid wide" id="staffShareCards"></div>
+
+  <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr;margin-top:4px">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Evolución Staff Score — Últimos 4 meses</div>
+      </div>
+      <canvas id="staffScoreChart" style="width:100%;height:200px;display:block"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Evolución Response Time — Últimos 4 meses</div>
+      </div>
+      <canvas id="responseTimeChart" style="width:100%;height:200px;display:block"></canvas>
+    </div>
+  </div>
+
+  <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr;margin-top:14px">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Share Auditorías — Sofía vs Andrea</div>
+      </div>
+      <canvas id="auditShareChart" style="width:100%;height:200px;display:block"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">% Auditorías Completadas</div>
+      </div>
+      <canvas id="auditCompletionChart" style="width:100%;height:200px;display:block"></canvas>
+    </div>
+  </div>
 </main>
 </div>
 
@@ -1358,6 +1388,7 @@ function renderDashboard(){
   renderAcumTable();
   renderYTD();
   renderHKPies();
+  setTimeout(renderStaffCharts, 50);
 }
 
 // ═══════════════════════════════════════════════
@@ -3386,6 +3417,216 @@ function executeDeleteMonth(){
 // ═══════════════════════════════════════════════
 //  UI HELPERS
 // ═══════════════════════════════════════════════
+
+function renderStaffCharts(){
+  if(!appData) return;
+  const MONTHS_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  function mOrd(mes){const[m,y]=mes.split(' ');return parseInt(y)*12+MONTHS_ES.indexOf(m);}
+
+  // Get last 4 months up to currentMes
+  const tOrd = mOrd(currentMes);
+  const sorted = appData.meses
+    .filter(m => mOrd(m.mes) <= tOrd)
+    .sort((a,b) => mOrd(a.mes)-mOrd(b.mes))
+    .slice(-4);
+
+  if(!sorted.length) return;
+  const labels = sorted.map(m => m.mes.split(' ')[0].slice(0,3));
+
+  function getKPIsLocal(m){
+    try{ return getKPIs(m); }catch(e){ return null; }
+  }
+
+  const staffData      = sorted.map(m => { const k=getKPIsLocal(m); return k&&k.staff!=null ? parseFloat(k.staff.toFixed(2)) : null; });
+  const rtData         = sorted.map(m => m.hosts && m.hosts.response_time!=null ? m.hosts.response_time : null);
+  const sofiaData      = sorted.map(m => m.hosts && m.hosts.share_sofia!=null ? m.hosts.share_sofia : null);
+  const andreaData     = sorted.map(m => m.hosts && m.hosts.share_andrea!=null ? m.hosts.share_andrea : null);
+  const completionData = sorted.map(m => m.hosts && m.hosts.qa_completion!=null ? m.hosts.qa_completion : null);
+
+  const dpr = window.devicePixelRatio || 1;
+
+  function setupCanvas(id){
+    const c = document.getElementById(id);
+    if(!c) return null;
+    const pw = c.parentElement ? c.parentElement.clientWidth : 0;
+    if(pw <= 32) return null; // hidden tab / not laid out yet — avoid a negative canvas size
+    const W = pw - 32;
+    const H = 200;
+    c.width  = W*dpr; c.height = H*dpr;
+    c.style.width = W+'px'; c.style.height = H+'px';
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    return {ctx,W,H};
+  }
+
+  function drawLineChart(id, datasets, opts={}){
+    const cv = setupCanvas(id); if(!cv) return;
+    const {ctx,W,H} = cv;
+    const pad = {top:20,right:20,bottom:30,left:44};
+    const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
+
+    // Grid
+    ctx.strokeStyle = '#E8EEF4'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y = pad.top + (cH/4)*i;
+      ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cW,y); ctx.stroke();
+    }
+
+    // Determine scale
+    const allVals = datasets.flatMap(d=>d.data).filter(v=>v!=null);
+    if(!allVals.length) return;
+    const minV = opts.minV != null ? opts.minV : Math.floor(Math.min(...allVals)*10)/10-0.1;
+    const maxV = opts.maxV != null ? opts.maxV : Math.ceil(Math.max(...allVals)*10)/10+0.1;
+    const range = maxV - minV || 1;
+
+    // Y axis labels
+    ctx.fillStyle='#6B7A8D'; ctx.font=`10px -apple-system,sans-serif`; ctx.textAlign='right';
+    for(let i=0;i<=4;i++){
+      const v = maxV - (range/4)*i;
+      const y = pad.top + (cH/4)*i;
+      ctx.fillText(v.toFixed(opts.decimals!=null?opts.decimals:2), pad.left-4, y+3);
+    }
+
+    // X axis labels
+    ctx.textAlign='center'; ctx.fillStyle='#6B7A8D';
+    labels.forEach((l,i)=>{
+      const x = pad.left + (cW/(labels.length-1||1))*i;
+      ctx.fillText(l, x, H-6);
+    });
+
+    // Lines
+    datasets.forEach(ds=>{
+      ctx.strokeStyle=ds.color; ctx.lineWidth=2.5;
+      ctx.beginPath();
+      let first=true;
+      ds.data.forEach((v,i)=>{
+        if(v==null) return;
+        const x = pad.left + (cW/(labels.length-1||1))*i;
+        const y = pad.top + cH*(1-(v-minV)/range);
+        first ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        first=false;
+      });
+      ctx.stroke();
+
+      // Dots + values
+      ds.data.forEach((v,i)=>{
+        if(v==null) return;
+        const x = pad.left + (cW/(labels.length-1||1))*i;
+        const y = pad.top + cH*(1-(v-minV)/range);
+        ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+        ctx.fillStyle=ds.color; ctx.fill();
+        ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.fillStyle='#263040'; ctx.font='bold 10px -apple-system,sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText(v.toFixed(opts.decimals!=null?opts.decimals:2), x, y-8);
+      });
+    });
+
+    // Legend
+    if(datasets.length>1){
+      let lx = pad.left;
+      datasets.forEach(ds=>{
+        ctx.fillStyle=ds.color;
+        ctx.fillRect(lx,4,12,3);
+        ctx.fillStyle='#6B7A8D'; ctx.font='10px -apple-system,sans-serif'; ctx.textAlign='left';
+        ctx.fillText(ds.label||'', lx+15, 10);
+        lx += ctx.measureText(ds.label||'').width + 30;
+      });
+    }
+  }
+
+  function drawBarChart(id, datasets, opts={}){
+    const cv = setupCanvas(id); if(!cv) return;
+    const {ctx,W,H} = cv;
+    const pad = {top:20,right:20,bottom:30,left:44};
+    const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
+    const n = labels.length;
+    const nDs = datasets.length;
+    const groupW = cW/n;
+    const barW = Math.min(groupW*0.35, 28);
+    const gap = 4;
+
+    const allVals = datasets.flatMap(d=>d.data).filter(v=>v!=null);
+    if(!allVals.length) return;
+    const maxV = opts.maxV != null ? opts.maxV : Math.ceil(Math.max(...allVals)/10)*10+5;
+    const minV = 0;
+    const range = maxV-minV||1;
+
+    // Grid
+    ctx.strokeStyle='#E8EEF4'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=pad.top+(cH/4)*i;
+      ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cW,y); ctx.stroke();
+    }
+
+    // Y labels
+    ctx.fillStyle='#6B7A8D'; ctx.font='10px -apple-system,sans-serif'; ctx.textAlign='right';
+    for(let i=0;i<=4;i++){
+      const v=maxV-(range/4)*i;
+      ctx.fillText(v.toFixed(0)+'%', pad.left-4, pad.top+(cH/4)*i+3);
+    }
+
+    // X labels
+    ctx.textAlign='center'; ctx.fillStyle='#6B7A8D';
+    labels.forEach((l,i)=>{
+      const cx = pad.left+groupW*i+groupW/2;
+      ctx.fillText(l, cx, H-6);
+    });
+
+    // Bars
+    datasets.forEach((ds,di)=>{
+      ds.data.forEach((v,i)=>{
+        if(v==null) return;
+        const cx = pad.left+groupW*i+groupW/2;
+        const offset = (di-(nDs-1)/2)*(barW+gap);
+        const x = cx+offset-barW/2;
+        const bH = cH*(v-minV)/range;
+        const y = pad.top+cH-bH;
+        ctx.fillStyle=ds.color;
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(x,y,barW,bH,3) : ctx.rect(x,y,barW,bH);
+        ctx.fill();
+        ctx.fillStyle='#263040'; ctx.font='bold 9px -apple-system,sans-serif'; ctx.textAlign='center';
+        ctx.fillText(v.toFixed(1)+'%', cx+offset, y-4);
+      });
+    });
+
+    // Legend
+    let lx=pad.left;
+    datasets.forEach(ds=>{
+      ctx.fillStyle=ds.color; ctx.fillRect(lx,4,12,8);
+      ctx.fillStyle='#6B7A8D'; ctx.font='10px -apple-system,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(ds.label||'', lx+15, 12);
+      lx += (ctx.measureText(ds.label||'').width||40)+30;
+    });
+  }
+
+  // Draw all 4 charts
+  const staffMin = staffData.filter(v=>v).length ? Math.min(...staffData.filter(v=>v))-0.1 : 4.0;
+  const staffMax = staffData.filter(v=>v).length ? Math.max(...staffData.filter(v=>v))+0.1 : 5.0;
+  drawLineChart('staffScoreChart',
+    [{data:staffData, color:'#168C95', label:'Staff Score'}],
+    {minV:Math.floor(staffMin*10)/10, maxV:Math.ceil(staffMax*10)/10, decimals:2});
+
+  const rtMin = rtData.filter(v=>v).length ? Math.min(...rtData.filter(v=>v))-5 : 0;
+  const rtMax = rtData.filter(v=>v).length ? Math.max(...rtData.filter(v=>v))+5 : 60;
+  drawLineChart('responseTimeChart',
+    [{data:rtData, color:'#E26147', label:'Response Time (min)'}],
+    {minV:Math.max(0,Math.floor(rtMin/5)*5), maxV:Math.ceil(rtMax/5)*5, decimals:0});
+
+  drawBarChart('auditShareChart',
+    [{data:sofiaData,  color:'#168C95', label:'Sofía'},
+     {data:andreaData, color:'#F9A058', label:'Andrea'}],
+    {maxV:100});
+
+  const compMin = completionData.filter(v=>v).length ? Math.min(...completionData.filter(v=>v))-5 : 0;
+  const compMax = completionData.filter(v=>v).length ? Math.max(...completionData.filter(v=>v))+5 : 100;
+  drawBarChart('auditCompletionChart',
+    [{data:completionData, color:'#38495D', label:'% Auditorías QA'}],
+    {maxV:Math.min(100,Math.ceil(compMax/10)*10)});
+}
+
 function switchTab(name,btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -3394,6 +3635,7 @@ function switchTab(name,btn){
   if(name==='capture')updateCaptureTab();
   if(name==='dashboard'){renderDashboard();setTimeout(renderChart,50);}
   if(name==='staff'||name==='housekeeping') renderDashboard();
+  if(name==='staff') setTimeout(renderStaffCharts, 100);
   if(name==='housekeeping') setTimeout(renderHKPies, 200);
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
