@@ -3439,8 +3439,8 @@ function renderStaffCharts(){
 
   const staffData      = sorted.map(m => { const k=getKPIsLocal(m); return k&&k.staff!=null ? parseFloat(k.staff.toFixed(2)) : null; });
   const rtData         = sorted.map(m => m.hosts && m.hosts.response_time!=null ? m.hosts.response_time : null);
-  const sofiaData      = sorted.map(m => m.hosts && m.hosts.share_sofia!=null ? m.hosts.share_sofia : null);
-  const andreaData     = sorted.map(m => m.hosts && m.hosts.share_andrea!=null ? m.hosts.share_andrea : null);
+  const sofiaData      = sorted.map(m => { const k=getKPIsLocal(m); return k&&k.hosts&&k.hosts.share_sofia!=null ? k.hosts.share_sofia : null; });
+  const andreaData     = sorted.map(m => { const k=getKPIsLocal(m); return k&&k.hosts&&k.hosts.share_andrea!=null ? k.hosts.share_andrea : null; });
   const completionData = sorted.map(m => m.hosts && m.hosts.qa_completion!=null ? m.hosts.qa_completion : null);
 
   const dpr = window.devicePixelRatio || 1;
