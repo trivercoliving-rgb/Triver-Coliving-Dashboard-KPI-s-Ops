@@ -2085,6 +2085,37 @@ ${ytdTableHTML}
 }
 
 
+function exportPNG(elementId){
+  const el = document.getElementById(elementId);
+  if(!el){ showToast('Sección no encontrada','err'); return; }
+  showToast('Generando imagen...');
+  const month = currentMes ? currentMes.replace(' ','_') : 'export';
+  const name  = elementId.replace('export','').replace(/([A-Z])/g,' $1').trim() || elementId;
+  html2canvas(el, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    onclone: (doc) => {
+      // Ensure cloned doc has white background
+      doc.body.style.background = '#ffffff';
+    }
+  }).then(canvas => {
+    canvas.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = `Triver_${name}_${month}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('PNG exportado ✓');
+    }, 'image/png');
+  }).catch(err => {
+    console.error('exportPNG error:', err);
+    showToast('Error al exportar. Usa Cmd+Shift+4','err');
+  });
+}
+
 function exportHKPies(){
   const el = document.getElementById('hkPieGrid');
   if(!el){ showToast('Sección no encontrada','err'); return; }
