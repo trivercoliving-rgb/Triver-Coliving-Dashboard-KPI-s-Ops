@@ -2091,17 +2091,25 @@ function exportPNG(elementId){
   showToast('Generando imagen...');
   const month = currentMes ? currentMes.replace(' ','_') : 'export';
   const name  = elementId.replace('export','').replace(/([A-Z])/g,' $1').trim() || elementId;
+  const elW = el.offsetWidth || 900;
   html2canvas(el, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     allowTaint: true,
     logging: false,
+    width: elW,
+    windowWidth: elW + 64,
     onclone: (doc) => {
       doc.body.style.background = '#ffffff';
-      // Force all surfaces to white in clone
-      doc.querySelectorAll('.chart-card,.breakdown,.cards-grid,.ytd-combined,.ytd-grid').forEach(el => {
-        el.style.background = '#ffffff';
+      doc.querySelectorAll('.chart-card,.breakdown,.cards-grid,.ytd-combined,.ytd-grid').forEach(e => {
+        e.style.background = '#ffffff';
+      });
+      // Fix flex containers that expand to full viewport width
+      doc.querySelectorAll('.ytd-combined,.ytd-combined-info').forEach(e => {
+        e.style.maxWidth = elW + 'px';
+        e.style.flex = 'none';
+        e.style.width = '100%';
       });
     }
   }).then(canvas => {
