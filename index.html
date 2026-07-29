@@ -619,7 +619,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     <canvas id="trendChart"></canvas>
   </div>
 
-  <div class="section-label">YTD Score Analysis — Clasificación de Reseñas <button class="btn-export-png" onclick="exportPNG('exportYTD')">⬇ PNG</button></div>
+  <div class="section-label">YTD Score Analysis — Clasificación de Reseñas <button class="btn-export-png" onclick="exportYTD()">⬇ PNG</button></div>
   <div id="exportYTD">
     <div class="ytd-donut-wrap" style="width:150px;height:150px">
       <canvas id="ytdCombinedCanvas" width="150" height="150"></canvas>
@@ -2084,6 +2084,49 @@ ${ytdTableHTML}
   win.document.close();
 }
 
+
+function exportYTD(){
+  const el = document.getElementById('exportYTD');
+  if(!el){ showToast('Sección no encontrada','err'); return; }
+  showToast('Generando imagen...');
+  const month = currentMes ? currentMes.replace(' ','_') : 'export';
+
+  // Temporarily constrain width for correct export
+  const prevStyle = el.style.cssText;
+  el.style.maxWidth = '900px';
+  el.style.overflow = 'hidden';
+
+  // Fix ytd-combined-info flex expansion
+  const infoEls = el.querySelectorAll('.ytd-combined-info');
+  const prevInfoStyles = [...infoEls].map(e => e.style.cssText);
+  infoEls.forEach(e => { e.style.flex = 'none'; e.style.width = '320px'; e.style.minWidth = '0'; });
+
+  html2canvas(el, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false,
+    width: 900,
+    windowWidth: 1200,
+  }).then(canvas => {
+    // Restore styles
+    el.style.cssText = prevStyle;
+    infoEls.forEach((e,i) => { e.style.cssText = prevInfoStyles[i]; });
+
+    canvas.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = `Triver_YTD_${month}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('PNG exportado ✓');
+    }, 'image/png');
+  }).catch(err => {
+    el.style.cssText = prevStyle;
+    infoEls.forEach((e,i) => { e.style.cssText = prevInfoStyles[i]; });
+    showToast('Error al exportar','err');
+  });
+}
 
 function exportPNG(elementId){
   const el = document.getElementById(elementId);
