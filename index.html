@@ -2189,25 +2189,37 @@ function exportPNG(elementId){
 }
 
 function exportHKPies(){
-  const el = document.getElementById('hkPieGrid');
-  if(!el){ showToast('Sección no encontrada','err'); return; }
-  showToast('Generando imagen...');
+  const pieCheckout  = document.getElementById('pieCheckout');
+  const pieCortesias = document.getElementById('pieCortesias');
+  const cardCheckout  = pieCheckout  ? pieCheckout.closest('.chart-card')  : null;
+  const cardCortesias = pieCortesias ? pieCortesias.closest('.chart-card') : null;
+  if(!cardCheckout || !cardCortesias){ showToast('Sección no encontrada','err'); return; }
+  showToast('Generando imágenes...');
   const month = currentMes ? currentMes.replace(' ','_') : 'export';
-  html2canvas(el, {
+
+  const capture = (el, filename) => html2canvas(el, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     logging: false
-  }).then(canvas => {
+  }).then(canvas => new Promise(resolve => {
     canvas.toBlob(b => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(b);
-      a.download = `Triver_Distribucion_Limpiezas_${month}.png`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(a.href);
-      showToast('PNG exportado ✓');
+      resolve();
     }, 'image/png');
-  }).catch(() => showToast('Error al exportar','err'));
+  }));
+
+  capture(cardCheckout, `Triver_Limpiezas_CheckOut_${month}.png`)
+    .then(() => capture(cardCortesias, `Triver_Limpiezas_Cortesias_${month}.png`))
+    .then(() => showToast('2 PNGs exportados ✓'))
+    .catch(err => {
+      console.error('exportHKPies error:', err);
+      showToast('Error al exportar','err');
+    });
 }
 
 function exportCanvasPNG(canvas, name){
