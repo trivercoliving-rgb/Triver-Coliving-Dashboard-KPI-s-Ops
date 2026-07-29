@@ -514,6 +514,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
   .field-grid.cols2,.field-grid.cols3{grid-template-columns:1fr}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -695,7 +696,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     </div>
   </div>
 
-  <div class="section-label" style="margin-top:24px">Desempeño HK — Detalles por Auditoría</div>
+  <div class="section-label" style="margin-top:24px">Desempeño HK — Detalles por Auditoría <button class="btn-export-png" onclick="exportPNG('hkDetailGrid')">⬇ PNG</button></div>
   <div class="hk-detail-grid" id="hkDetailGrid"></div>
 </main>
 </div>
@@ -2085,108 +2086,25 @@ ${ytdTableHTML}
 
 
 function exportHKPies(){
+  const el = document.getElementById('hkPieGrid');
+  if(!el){ showToast('Sección no encontrada','err'); return; }
+  showToast('Generando imagen...');
   const month = currentMes ? currentMes.replace(' ','_') : 'export';
-  ['pieCheckout','pieCortesias'].forEach((id, i) => {
-    const c = document.getElementById(id);
-    if(!c) return;
-    setTimeout(() => {
-      c.toBlob(b => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(b);
-        a.download = 'Triver_' + id + '_' + month + '.png';
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }, 'image/png');
-    }, i * 400);
-  });
-  showToast('2 PNGs exportados ✓');
-}
-
-// ── EXPORT PNG ──
-function exportPNG(elementId){
-  const el = document.getElementById(elementId);
-  if(!el){ showToast('Sección no encontrada', true); return; }
-
-  const scale = 2; // 2x for retina quality
-  const rect = el.getBoundingClientRect();
-  const W = rect.width;
-  const H = rect.height;
-
-  // Clone the element for export (avoid modifying the live DOM)
-  const clone = el.cloneNode(true);
-  clone.style.position = 'fixed';
-  clone.style.top = '0';
-  clone.style.left = '0';
-  clone.style.width = W + 'px';
-  clone.style.zIndex = '-9999';
-  clone.style.background = '#ffffff';
-  clone.style.padding = '16px';
-  document.body.appendChild(clone);
-
-  // Use SVG foreignObject to render HTML into canvas
-  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${W + 32}" height="${H + 32}">
-    <foreignObject width="100%" height="100%">
-      <div xmlns="http://www.w3.org/1999/xhtml"
-        style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
-               font-size:14px;background:#fff;padding:16px;width:${W}px;box-sizing:border-box">
-        ${clone.innerHTML}
-      </div>
-    </foreignObject>
-  </svg>`;
-
-  document.body.removeChild(clone);
-
-  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const img  = new Image();
-
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width  = (W + 32) * scale;
-    canvas.height = (H + 32) * scale;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-    URL.revokeObjectURL(url);
-
-    // Add TRIVER watermark
-    ctx.scale(1/scale, 1/scale); // reset scale for watermark
-    ctx.font = `bold ${10*scale}px -apple-system,BlinkMacSystemFont,sans-serif`;
-    ctx.fillStyle = 'rgba(56,73,93,0.25)';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('Triver Coliving · KPIs Operativos', (W+32)*scale - 8*scale, (H+32)*scale - 6*scale);
-
-    // Download
-    const month = currentMes ? currentMes.replace(' ','_') : 'export';
-    const name  = elementId.replace('export','').replace(/([A-Z])/g,' $1').trim() || elementId;
+  html2canvas(el, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
     canvas.toBlob(b => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(b);
-      a.download = `Triver_${name}_${month}.png`;
+      a.download = `Triver_Distribucion_Limpiezas_${month}.png`;
       a.click();
       URL.revokeObjectURL(a.href);
       showToast('PNG exportado ✓');
     }, 'image/png');
-  };
-
-  img.onerror = () => {
-    URL.revokeObjectURL(url);
-    // Fallback: for canvas elements (pie/trend charts), export directly
-    const canvases = el.querySelectorAll('canvas');
-    if(canvases.length === 1){
-      exportCanvasPNG(canvases[0], elementId);
-    } else if(canvases.length > 1){
-      // Merge multiple canvases
-      exportMergedCanvases(el, elementId);
-    } else {
-      showToast('Error al exportar. Usa Cmd+Shift+4', true);
-    }
-  };
-
-  img.src = url;
+  }).catch(() => showToast('Error al exportar','err'));
 }
 
 function exportCanvasPNG(canvas, name){
