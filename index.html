@@ -2091,28 +2091,46 @@ function exportYTD(){
   showToast('Generando imagen...');
   const month = currentMes ? currentMes.replace(' ','_') : 'export';
 
-  // Temporarily constrain width for correct export
-  const prevStyle = el.style.cssText;
-  el.style.maxWidth = '900px';
-  el.style.overflow = 'hidden';
+  const donut = el.querySelector('.ytd-donut-wrap');
+  const info  = el.querySelector('.ytd-combined-info');
 
-  // Fix ytd-combined-info flex expansion
-  const infoEls = el.querySelectorAll('.ytd-combined-info');
-  const prevInfoStyles = [...infoEls].map(e => e.style.cssText);
-  infoEls.forEach(e => { e.style.flex = 'none'; e.style.width = '320px'; e.style.minWidth = '0'; });
+  const prevElStyle = el.style.cssText;
+  el.style.background = '#ffffff';
+
+  // Temporarily wrap donut + info as a single horizontal .ytd-combined row
+  let wrapper = null;
+  if(donut && info){
+    wrapper = document.createElement('div');
+    wrapper.className = 'ytd-combined';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'row';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.flexWrap = 'nowrap';
+    wrapper.style.width = '780px';
+    wrapper.style.background = '#ffffff';
+    el.insertBefore(wrapper, donut);
+    wrapper.appendChild(donut);
+    wrapper.appendChild(info);
+  }
+
+  const restore = () => {
+    el.style.cssText = prevElStyle;
+    if(wrapper){
+      el.insertBefore(donut, wrapper);
+      el.insertBefore(info, wrapper);
+      el.removeChild(wrapper);
+    }
+  };
 
   html2canvas(el, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     logging: false,
-    width: 900,
-    windowWidth: 1200,
+    width: 780,
+    windowWidth: 780,
   }).then(canvas => {
-    // Restore styles
-    el.style.cssText = prevStyle;
-    infoEls.forEach((e,i) => { e.style.cssText = prevInfoStyles[i]; });
-
+    restore();
     canvas.toBlob(b => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(b);
@@ -2122,8 +2140,8 @@ function exportYTD(){
       showToast('PNG exportado ✓');
     }, 'image/png');
   }).catch(err => {
-    el.style.cssText = prevStyle;
-    infoEls.forEach((e,i) => { e.style.cssText = prevInfoStyles[i]; });
+    restore();
+    console.error('exportYTD error:', err);
     showToast('Error al exportar','err');
   });
 }
