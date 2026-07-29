@@ -696,7 +696,7 @@ canvas#trendChart{width:100%!important;height:190px!important;display:block}
     </div>
   </div>
 
-  <div class="section-label" style="margin-top:24px">Desempeño HK — Detalles por Auditoría <button class="btn-export-png" onclick="exportPNG('hkDetailGrid')">⬇ PNG</button></div>
+  <div class="section-label" style="margin-top:24px">Desempeño HK — Detalles por Auditoría</div>
   <div class="hk-detail-grid" id="hkDetailGrid"></div>
 </main>
 </div>
@@ -1713,7 +1713,7 @@ function renderHKDetail(md) {
 
   const perfHTML = perfRows.length ? `
     <div class="hk-detail-card" style="grid-column:1/-1;margin-bottom:4px">
-      <div class="hk-detail-card-title">Desempeño HK — Detalles por Auditoría (menor es mejor)</div>
+      <div class="hk-detail-card-title">Desempeño HK — Detalles por Auditoría (menor es mejor) <button class="btn-export-png" onclick="exportHKDetailCard(this,'Triver_Desempeno_HK')">⬇ PNG</button></div>
       <table class="hk-table">
         <thead>
           <tr>
@@ -1751,7 +1751,7 @@ function renderHKDetail(md) {
   grid.innerHTML = `
     ${perfHTML}
     <div class="hk-detail-card">
-      <div class="hk-detail-card-title">Detalles por Categoría — ${qa.total_details || 0} total</div>
+      <div class="hk-detail-card-title">Detalles por Categoría — ${qa.total_details || 0} total <button class="btn-export-png" onclick="exportHKDetailCard(this,'Triver_Detalles_Categoria')">⬇ PNG</button></div>
       <table class="hk-table">
         <thead><tr><th>Categoría — Detalle</th><th style="text-align:right">#</th></tr></thead>
         <tbody>
@@ -1766,7 +1766,7 @@ function renderHKDetail(md) {
       </table>
     </div>
     <div class="hk-detail-card">
-      <div class="hk-detail-card-title">Detalles por Integrante</div>
+      <div class="hk-detail-card-title">Detalles por Integrante <button class="btn-export-png" onclick="exportHKDetailCard(this,'Triver_Detalles_Integrante')">⬇ PNG</button></div>
       ${cleaners.map(([name, total, details]) => `
         <div style="margin-bottom:10px">
           <div style="font-size:11px;font-weight:700;color:var(--triver-navy);margin-bottom:3px">
@@ -2220,6 +2220,32 @@ function exportHKPies(){
       console.error('exportHKPies error:', err);
       showToast('Error al exportar','err');
     });
+}
+
+function exportHKDetailCard(btn, prefix){
+  const card = btn.closest('.hk-detail-card');
+  if(!card){ showToast('Sección no encontrada','err'); return; }
+  showToast('Generando imagen...');
+  const month = currentMes ? currentMes.replace(' ','_') : 'export';
+  html2canvas(card, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false,
+    ignoreElements: el => el.classList && el.classList.contains('btn-export-png')
+  }).then(canvas => {
+    canvas.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = `${prefix}_${month}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('PNG exportado ✓');
+    }, 'image/png');
+  }).catch(err => {
+    console.error('exportHKDetailCard error:', err);
+    showToast('Error al exportar','err');
+  });
 }
 
 function exportCanvasPNG(canvas, name){
