@@ -3801,81 +3801,112 @@ function processAirbnbCSV(input){
 // ── EXPEDIA CSV PROCESSOR (Apify scraper)
 // Columns used: rating (2–10), published_date (mixed: "20 abr. 2026" or ISO "2026-02-14")
 function processExpediaCSV(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const allRows=parseCSVFull(e.target.result);
-      if(allRows.length<2){showStatus('expediaStatus','Archivo vacío o ilegible.',false);return;}
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = parseCSVFull(e.target.result);
+      if(rows.length < 2){ showStatus('expediaStatus','Archivo vacío.',false); return; }
+      const headers = rows[0].map(h => h.trim());
 
-      const headers=allRows[0].map(h=>h.trim());
-      const rIdx=headers.findIndex(h=>/^rating$/i.test(h));
-      const dIdx=headers.findIndex(h=>/^published_date$/i.test(h));
+      // Detect new scraper format (has 'overallRating' and 'submittedAt')
+      // vs old format (has 'rating' and 'published_date')
+      const isNewFormat = headers.includes('overallRating') && headers.includes('submittedAt');
 
-      if(rIdx<0){showStatus('expediaStatus',`Columna "rating" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
-      if(dIdx<0){showStatus('expediaStatus',`Columna "published_date" no encontrada. Columnas: ${headers.join(', ')}`,false);return;}
+      const ratingCol   = isNewFormat ? headers.indexOf('overallRating')  : headers.findIndex(h => /rating/i.test(h) && !/label/i.test(h));
+      const dateCol     = isNewFormat ? headers.indexOf('submittedAt')     : headers.findIndex(h => /published_date/i.test(h) || /date/i.test(h));
+      const cleanCol    = isNewFormat ? headers.indexOf('subRatings/0')    : -1;
 
-      const MON_ES={'ene':0,'feb':1,'mar':2,'abr':3,'may':4,'jun':5,
-                    'jul':6,'ago':7,'sep':8,'oct':9,'nov':10,'dic':11};
+      if(ratingCol < 0 || dateCol < 0){
+        showStatus('expediaStatus','No se encontraron columnas de rating o fecha.',false);
+        return;
+      }
 
-      function parseExpDate(str){
-        str=(str||'').trim();
-        const iso=str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if(iso) return {yr:parseInt(iso[1]), mo:parseInt(iso[2])-1};
-        const sp=str.match(/^(\d{1,2})\s+([a-záéíóú]+)\.?\s+(\d{4})$/i);
-        if(sp){
-          const mo=MON_ES[sp[2].toLowerCase().substring(0,3)];
-          return mo!==undefined?{yr:parseInt(sp[3]), mo}:null;
+      // Group by month
+      const byMonth = {};
+      const cleanByMonth = {};
+      for(let i = 1; i < rows.length; i++){
+        const row = rows[i];
+        const rawRating = row[ratingCol];
+        const rawDate   = row[dateCol];
+        if(!rawRating || !rawDate) continue;
+
+        const rating = parseFloat(rawRating);
+        if(isNaN(rating)) continue;
+
+        // Parse date — ISO (2026-07-30T...) or Spanish mixed format
+        let mon = null, yr = null;
+        const isoMatch = rawDate.match(/^(\d{4})-(\d{2})/);
+        if(isoMatch){
+          yr  = parseInt(isoMatch[1]);
+          mon = parseInt(isoMatch[2]) - 1; // 0-based
+        } else {
+          // Old format: "20 abr. 2026" or similar
+          const MESES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11};
+          const parts = rawDate.toLowerCase().split(/[\s.]+/);
+          for(const p of parts){
+            const m = Object.keys(MESES).find(k => p.startsWith(k));
+            if(m) mon = MESES[m];
+            const y = parseInt(p);
+            if(y > 2000) yr = y;
+          }
         }
-        return null;
-      }
+        if(mon === null || yr === null) continue;
 
-      // Build a map: "YYYY-M" → [ratings] for every row in the CSV
-      const byMonth={};
-      let totalValid=0;
-      for(let i=1;i<allRows.length;i++){
-        const vals=allRows[i];
-        if(vals.length<2) continue;
-        const rating=parseFloat(vals[rIdx]);
-        if(isNaN(rating)||rating<=0) continue;
-        totalValid++;
-        const parsed=parseExpDate(vals[dIdx]);
-        if(!parsed) continue;
-        const key=parsed.yr+'-'+parsed.mo;
-        if(!byMonth[key]) byMonth[key]=[];
+        const key = `${yr}-${String(mon+1).padStart(2,'0')}`;
+        if(!byMonth[key]) byMonth[key] = [];
         byMonth[key].push(rating);
+
+        // Extract cleanliness from subRatings/0: "Cleanliness: 10"
+        if(cleanCol >= 0 && row[cleanCol]){
+          const cm = row[cleanCol].match(/Cleanliness[:\s]+(\d+(?:\.\d+)?)/i);
+          if(cm){
+            if(!cleanByMonth[key]) cleanByMonth[key] = [];
+            cleanByMonth[key].push(parseFloat(cm[1]));
+          }
+        }
       }
 
-      // Update rating_list for every saved month that has data in the CSV
-      const data=loadData();
-      let updatedMonths=0;
-      data.meses.forEach(m=>{
-        const [mMon,mYr]=m.mes.split(' ');
-        const key=parseInt(mYr)+'-'+MONTHS_ES.indexOf(mMon);
-        const list=byMonth[key];
-        if(!list||list.length===0) return;
-        const avg=list.reduce((a,b)=>a+b,0)/list.length;
-        m.expedia.general_score10=parseFloat(avg.toFixed(2));
-        m.expedia.general_reviews=list.length;
-        m.expedia.rating_list=list;
-        updatedMonths++;
+      if(!Object.keys(byMonth).length){
+        showStatus('expediaStatus','No se encontraron reseñas válidas.',false);
+        return;
+      }
+
+      const MONTHS_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const data = loadData();
+      let updated = 0;
+
+      Object.entries(byMonth).forEach(([key, ratings]) => {
+        const [yr, mo] = key.split('-');
+        const mesName = MONTHS_ES[parseInt(mo)-1] + ' ' + yr;
+        const idx = data.meses.findIndex(m => m.mes === mesName);
+        if(idx < 0) return;
+
+        const avg10 = ratings.reduce((a,b)=>a+b,0) / ratings.length;
+        data.meses[idx].expedia = data.meses[idx].expedia || {};
+        data.meses[idx].expedia.general_score10  = parseFloat(avg10.toFixed(2));
+        data.meses[idx].expedia.general_reviews  = ratings.length;
+        data.meses[idx].expedia.rating_list      = ratings;
+
+        // Cleanliness score (new scraper only) — scale /10
+        if(cleanByMonth[key] && cleanByMonth[key].length){
+          const avgClean = cleanByMonth[key].reduce((a,b)=>a+b,0) / cleanByMonth[key].length;
+          data.meses[idx].expedia.limpieza = parseFloat(avgClean.toFixed(2));
+          data.meses[idx].expedia.limpieza_auto = true; // flag: came from CSV not manual
+        }
+        updated++;
       });
-      saveData(data);appData=data;
 
-      // Refresh UI for current month
-      const [tMon,tYear]=currentMes.split(' ');
-      const curKey=parseInt(tYear)+'-'+MONTHS_ES.indexOf(tMon);
-      const curList=byMonth[curKey]||[];
-      if(curList.length>0){
-        const avg=curList.reduce((a,b)=>a+b,0)/curList.length;
-        document.getElementById('exGeneralScore10').value=avg.toFixed(2);
-        document.getElementById('exGeneralReviews').value=curList.length;
-        showStatus('expediaStatus',`✓ ${curList.length} reseñas para ${currentMes} (de ${totalValid} en el archivo) · Score: ${avg.toFixed(2)}/10 · ${updatedMonths} meses actualizados`,true);
-      } else {
-        showStatus('expediaStatus',`Sin reseñas para ${currentMes}. Total en archivo: ${totalValid} · ${updatedMonths} meses actualizados`,false);
-      }
-      refreshPreview();renderDashboard();
-    }catch(err){showStatus('expediaStatus','Error: '+err.message,false);}
+      saveData(data); appData = data;
+      renderDashboard();
+      refreshPreview();
+      showStatus('expediaStatus',
+        `✓ ${updated} mes(es) actualizados · ${Object.values(byMonth).flat().length} reseñas${isNewFormat?' · Limpieza desde CSV':''}`,
+        true);
+
+    } catch(err){
+      showStatus('expediaStatus','Error: '+err.message, false);
+    }
   };
   reader.readAsText(file,'utf-8');
 }
