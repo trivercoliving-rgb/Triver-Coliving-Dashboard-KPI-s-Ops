@@ -3888,11 +3888,13 @@ function processExpediaCSV(input){
         data.meses[idx].expedia.general_reviews  = ratings.length;
         data.meses[idx].expedia.rating_list      = ratings;
 
-        // Cleanliness score (new scraper only) — scale /10
+        // Cleanliness score (new scraper only) — feed into expedia.rows so
+        // getKPIs()'s rowAvg(exRows,'limpieza') picks it up with correct per-review weight.
+        // Keep any manually entered rows; replace only rows we added from a previous CSV import.
         if(cleanByMonth[key] && cleanByMonth[key].length){
-          const avgClean = cleanByMonth[key].reduce((a,b)=>a+b,0) / cleanByMonth[key].length;
-          data.meses[idx].expedia.limpieza = parseFloat(avgClean.toFixed(2));
-          data.meses[idx].expedia.limpieza_auto = true; // flag: came from CSV not manual
+          const manualRows = (data.meses[idx].expedia.rows || []).filter(r => !r._csv);
+          const csvRows = cleanByMonth[key].map(v => ({staff:null, limpieza:parseFloat(v.toFixed(2)), _csv:true}));
+          data.meses[idx].expedia.rows = manualRows.concat(csvRows);
         }
         updated++;
       });
