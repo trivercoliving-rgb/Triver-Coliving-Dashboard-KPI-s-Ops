@@ -3158,7 +3158,7 @@ function refreshPreview(){
          acum:{ score:parseFloat(document.getElementById('hwAcumScore').value)||null, reviews:parseInt(document.getElementById('hwAcumReviews').value)||0 } },
     hosts:{
       response_time: parseFloat(document.getElementById('responseTime').value)||null,
-      qa_completion: parseFloat(document.getElementById('qaCompletion').value)||null,
+      qa_completion: (()=>{ const _auds=parseInt(document.getElementById('audTotal').value)||0; const _co=md.hk && md.hk.checkout || 0; return (_auds>0 && _co>0) ? parseFloat((_auds/_co*100).toFixed(2)) : (md.hosts && md.hosts.qa_completion) || null; })(),
       aud_sofia: parseInt(document.getElementById('audSofia').value)||null,
       aud_andrea: parseInt(document.getElementById('audAndrea').value)||null
     },
@@ -3408,8 +3408,10 @@ function saveAllCapture(){
 
   // Hosts — preserve qa-calculated fields, only update manual ones
   const existingQA = m.qa || null;
+  const _auds = parseInt(document.getElementById('audTotal').value)||0;
+  const _co = m.hk && m.hk.checkout || 0;
   m.hosts={ response_time:parseFloat(document.getElementById('responseTime').value)||null,
-             qa_completion:parseFloat(document.getElementById('qaCompletion').value)||null,
+             qa_completion:(_auds>0 && _co>0) ? parseFloat((_auds/_co*100).toFixed(2)) : (m.hosts && m.hosts.qa_completion) || null,
              aud_sofia:parseInt(document.getElementById('audSofia').value)||null,
              aud_andrea:parseInt(document.getElementById('audAndrea').value)||null,
              aud_total:parseInt(document.getElementById('audTotal').value)||null };
