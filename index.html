@@ -3335,19 +3335,26 @@ function renderEvHallazgos(range){
     // Grafía más frecuente; en empate, la que no trae numeración y conserva acentos
     const pref=s=>(/^\s*\d+[-.\s]+/.test(s)?0:2)+(/[^\x00-\x7F]/.test(s)?1:0);
     const name=Object.entries(o.spell).sort((a,b)=>b[1]-a[1]||pref(b[0])-pref(a[0])||a[0].localeCompare(b[0]))[0][0].trim();
-    return Object.assign(o,{name,tot:o.m.reduce((a,b)=>a+b,0)});
-  }).sort((a,b)=>(isUnk(a.key)-isUnk(b.key))||(b.tot-a.tot)||a.name.localeCompare(b.name));
+    const tot=o.m.reduce((a,b)=>a+b,0);
+    // % Hallazgos YTD = hallazgos ÷ auditorías × 100 (misma definición que % Hallazgos QA HK)
+    return Object.assign(o,{name,tot,pct:o.aud>0?tot/o.aud*100:null});
+  }).sort((a,b)=>(isUnk(a.key)-isUnk(b.key))            // "Desconocido" siempre al final
+    ||((a.pct==null)-(b.pct==null))                      // 0 auditorías (% = —) al final
+    ||(a.pct!=null&&b.pct!=null?a.pct-b.pct:0)           // mejor → peor (% ascendente)
+    ||(b.aud-a.aud)                                      // empate: más auditorías primero
+    ||a.name.localeCompare(b.name));
+  const pctCell=v=>`<td class="num"><span class="ev-cell">${v!=null?`<span class="dot ${SEM.hallazgos(v)}"></span>`:''}${EV_FMT.pct(v)}</span></td>`;
   const pTot=range.map((c,i)=>pList.reduce((s,x)=>s+x.m[i],0));
   let pb='';
   pList.forEach((x,pi)=>{
     const dets=Object.entries(x.det).map(([cat,a])=>({cat,a,t:a.reduce((p,q)=>p+q,0)})).sort((a,b)=>b.t-a.t);
-    pb+=`<tr class="${dets.length?'ev-exp':''}" ${dets.length?`onclick="evToggle(this,'evp${pi}')"`:''}><td class="ev-sticky">${dets.length?'<span class="ev-caret">▸</span>':'<span class="ev-caret"></span>'}${evEsc(x.name)}</td>${cellsOf(x.m)}<td class="num ev-ytd">${x.tot}</td><td class="num">${x.aud||'—'}</td></tr>`;
-    dets.forEach(d=>{ pb+=`<tr class="ev-det evp${pi}" hidden><td class="ev-sticky">${evEsc(d.cat)}</td>${cellsOf(d.a)}<td class="num ev-ytd">${d.t}</td><td></td></tr>`; });
+    pb+=`<tr class="${dets.length?'ev-exp':''}" ${dets.length?`onclick="evToggle(this,'evp${pi}')"`:''}><td class="ev-sticky">${dets.length?'<span class="ev-caret">▸</span>':'<span class="ev-caret"></span>'}${evEsc(x.name)}</td>${cellsOf(x.m)}<td class="num ev-ytd">${x.tot}</td><td class="num">${x.aud||'—'}</td>${pctCell(x.pct)}</tr>`;
+    dets.forEach(d=>{ pb+=`<tr class="ev-det evp${pi}" hidden><td class="ev-sticky">${evEsc(d.cat)}</td>${cellsOf(d.a)}<td class="num ev-ytd">${d.t}</td><td></td><td></td></tr>`; });
   });
-  pb+=`<tr class="ev-total"><td class="ev-sticky">Total</td>${cellsOf(pTot)}<td class="num ev-ytd">${pTot.reduce((a,b)=>a+b,0)}</td><td class="num">${pList.reduce((s,x)=>s+x.aud,0)||'—'}</td></tr>`;
+  pb+=`<tr class="ev-total"><td class="ev-sticky">Total</td>${cellsOf(pTot)}<td class="num ev-ytd">${pTot.reduce((a,b)=>a+b,0)}</td><td class="num">${pList.reduce((s,x)=>s+x.aud,0)||'—'}</td>${(()=>{const h=pTot.reduce((a,b)=>a+b,0),a=pList.reduce((s,x)=>s+x.aud,0);return pctCell(a>0?h/a*100:null);})()}</tr>`;
   document.getElementById('exportHallazgosIntegrante').innerHTML=pList.length
-    ?`<div class="ev-scroll"><table class="ev-table"><thead><tr><th class="ev-sticky">Integrante</th>${monthHead}<th class="num ev-ytd">Hallazgos YTD</th><th class="num">Auditorías YTD</th></tr></thead><tbody>${pb}</tbody></table></div>
-      <div class="ev-foot">Auditorías solo como contexto (no se calcula tasa). Nombres unificados sin acentos, mayúsculas ni numeración.</div>${foot}`
+    ?`<div class="ev-scroll"><table class="ev-table"><thead><tr><th class="ev-sticky">Integrante</th>${monthHead}<th class="num ev-ytd">Hallazgos YTD</th><th class="num">Auditorías YTD</th><th class="num">% Hallazgos YTD</th></tr></thead><tbody>${pb}</tbody></table></div>
+      <div class="ev-foot">Ordenado de mejor a menor desempeño (% de hallazgos por auditoría, YTD).<br>Nombres unificados sin acentos, mayúsculas ni numeración.</div>${foot}`
     :`<div class="ytd-no-data">Sin detalle de QA en la ventana.</div>${foot}`;
 }
 
