@@ -1,6 +1,6 @@
 # BLUEPRINT — Pestaña "Evolución & YTD" · Dashboard TRIVER KPIs
 
-**Versión:** 1.0 · **Fecha:** 26/11/2026 · **Responsable:** Diego Medina (Head of Operations)
+**Versión:** 1.1 · **Fecha:** 26/11/2026 · **Responsable:** Diego Medina (Head of Operations)
 **Repo:** `trivercoliving-rgb/Triver-Coliving-Dashboard-KPI-s-Ops` · **Base:** `main` posterior al commit `3bf9be6` ("Modo visor cifrado v1")
 **Tiempo objetivo:** ≤ 1.5 h de desarrollo
 
@@ -67,11 +67,17 @@ Filas = KPIs agrupados por familia. Columnas = Ene … mes seleccionado + **YTD*
 - Cada categoría se puede expandir (▸) para ver el detalle de respuestas sumadas.
 - Fila final de **Total**.
 
-### 5.5 Hallazgos HK por integrante (suma)
+### 5.5 Hallazgos HK por integrante (suma + % de hallazgos)
 - Fuente: `m.qa.by_cleaner`, formato `[[nombre, total, detalles], ...]`. También `m.qa.audits_by_cleaner`.
-- Filas = integrante. Columnas = meses + **Total hallazgos YTD** + **Auditorías YTD**. Las auditorías se muestran solo como contexto; no se calcula una tasa.
-- **Normalización de nombres** para sumar entre meses: minúsculas, sin acentos, espacios colapsados y recortados, y sin prefijos numéricos (`/^\d+[-.\s]+/`). Se muestra la grafía más frecuente.
-- "Desconocido" se muestra al final.
+- Columnas: Integrante · meses (hallazgos por mes) · **Total hallazgos YTD** · **Auditorías YTD** · **% Hallazgos YTD**.
+- **% Hallazgos YTD = Total hallazgos YTD ÷ Auditorías YTD × 100**, con 1 decimal. Es la misma definición que el `% Hallazgos QA HK` general, que es `total_details / total_audits × 100`. Puede superar 100 % porque una auditoría puede tener varios hallazgos.
+- Semáforo con la meta existente del dashboard: **< 20 % verde · 20–25 % amarillo · > 25 % rojo**.
+- **Orden: de mejor a peor desempeño**, es decir, % Hallazgos YTD **ascendente** (menor % = mejor).
+  - Empate: primero quien tenga más auditorías.
+  - Integrantes con 0 auditorías YTD: `%` = `—` y van al final.
+  - "Desconocido" va siempre al final.
+- Debajo de la tabla, una nota: *"Ordenado de mejor a menor desempeño (% de hallazgos por auditoría, YTD)."*
+- **Normalización de nombres** para sumar entre meses: minúsculas, sin acentos, espacios colapsados y recortados, y sin prefijos numéricos (`/^\d+[-.\s]+/`). Se muestra la grafía más frecuente. La misma normalización aplica a `audits_by_cleaner` para que hallazgos y auditorías crucen bien.
 - Se puede expandir (▸) para ver el detalle por categoría de esa persona.
 
 ### 5.6 Exportar
@@ -104,7 +110,9 @@ Si un mes no tiene objeto `qa` (por ejemplo, se cargó antes de que existiera el
 - [ ] El promedio simple ignora meses vacíos: con meses de 50, — y 70, el YTD es 60, no 40.
 - [ ] El total de limpiezas YTD es igual a la suma manual de `hk.limpiezas`.
 - [ ] Por cada mes, el total de hallazgos por categoría es igual a `qa.total_details` de ese mes.
-- [ ] "María López" y "maria lopez " se suman como una sola persona.
+- [ ] "María López" y "maria lopez " se suman como una sola persona, tanto en hallazgos como en auditorías.
+- [ ] % Hallazgos YTD por integrante = hallazgos ÷ auditorías × 100. Ejemplo: 6 hallazgos en 40 auditorías = 15.0 %, en verde.
+- [ ] La tabla de integrantes queda ordenada de menor a mayor %; los de 0 auditorías y "Desconocido" van al final.
 - [ ] Al cambiar el mes en el selector, se recalcula la ventana Ene → mes.
 - [ ] Los semáforos usan las mismas metas que el Dashboard.
 - [ ] Celular (375 px): las tablas hacen scroll interno y la página no tiene scroll horizontal.
@@ -114,4 +122,4 @@ Si un mes no tiene objeto `qa` (por ejemplo, se cargó antes de que existiera el
 
 ## 9. Fuera de alcance
 
-Comparativo contra año anterior, metas editables, filtros por canal en tablas, tasas de hallazgos por integrante y exportar a Excel.
+Comparativo contra año anterior, metas editables, filtros por canal en tablas, % de hallazgos por integrante mes a mes (solo YTD) y exportar a Excel.
