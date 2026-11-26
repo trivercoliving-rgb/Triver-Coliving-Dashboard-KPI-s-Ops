@@ -526,6 +526,35 @@ body.modo-visor .lock-input{font-size:16px;letter-spacing:.08em}
   body.modo-visor .sello-visor{flex-basis:100%;justify-content:center}
 }
 
+/* ══ EVOLUCIÓN & YTD ══ */
+.tabs{overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.ev-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ev-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+.breakdown .ev-table th,.breakdown .ev-table td{padding:8px 10px;white-space:nowrap}
+.breakdown .ev-table td.num{text-align:right}
+.ev-table .ev-sticky{position:sticky;left:0;z-index:1;text-align:left;min-width:150px;max-width:220px;white-space:normal;background:var(--surface)}
+.ev-table th.ev-sticky{background:var(--triver-navy);z-index:2}
+.breakdown .ev-table tr:nth-child(even) td.ev-sticky{background:var(--surface2)}
+.breakdown .ev-table tr:hover td.ev-sticky{background:var(--accent-dim)}
+.ev-table th.ev-ytd{background:var(--triver-teal)}
+.breakdown .ev-table td.ev-ytd{background:var(--accent-dim)!important;font-weight:800;color:var(--triver-navy)}
+.ev-cell{display:inline-flex;align-items:center;gap:5px;justify-content:flex-end}
+.ev-n{font-size:9px;font-weight:600;color:var(--muted);white-space:nowrap}
+.breakdown .ev-table tr.ev-fam td{background:var(--surface2)!important;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--triver-teal);padding:6px 10px}
+.ev-table tr.ev-sub td.ev-sticky{padding-left:22px;color:var(--muted)}
+.ev-table tr.ev-exp{cursor:pointer}
+.ev-table tr.ev-det td{font-size:11px;color:var(--muted)}
+.ev-table tr.ev-det td.ev-sticky{padding-left:28px}
+.breakdown .ev-table tr.ev-total td{font-weight:800;border-top:2px solid var(--triver-navy);background:var(--surface)}
+.ev-caret{display:inline-block;width:14px;color:var(--triver-teal)}
+.ev-foot{font-size:10px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--border);line-height:1.5}
+.ev-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.ev-chips:empty{display:none}
+.ev-chip{background:var(--surface2);color:var(--triver-navy);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600}
+.ev-chip.sm{font-size:11px;padding:3px 10px}
+.ev-chip.on{background:var(--triver-teal);color:#fff;border-color:var(--triver-teal)}
+
 /* RESPONSIVE */
 @media(max-width:700px){
   header,main{padding-left:14px;padding-right:14px}
@@ -598,6 +627,7 @@ body.modo-visor .lock-input{font-size:16px;letter-spacing:.08em}
   <button class="tab-btn active" onclick="switchTab('dashboard',this)">Dashboard</button>
   <button class="tab-btn" onclick="switchTab('staff',this)">Hosts</button>
   <button class="tab-btn" onclick="switchTab('housekeeping',this)">Housekeeping</button>
+  <button class="tab-btn" onclick="switchTab('evolucion',this)">Evolución &amp; YTD</button>
   <button class="tab-btn" data-editor-only onclick="switchTab('capture',this)">Captura de datos</button>
 </div>
 
@@ -725,6 +755,31 @@ body.modo-visor .lock-input{font-size:16px;letter-spacing:.08em}
 
   <div class="section-label" style="margin-top:24px">Desempeño HK — Detalles por Auditoría</div>
   <div class="hk-detail-grid" id="hkDetailGrid"></div>
+</main>
+</div>
+
+<!-- ═══ TAB: EVOLUCIÓN & YTD ═══ -->
+<div id="tab-evolucion" class="tab-panel">
+<main id="evolucionRoot">
+  <div class="section-label">Resumen YTD · <span id="evWindow" style="letter-spacing:.05em"></span> <button class="btn-export-png" onclick="exportPNG('exportEvolucionResumen')">⬇ PNG</button></div>
+  <div class="cards-grid" id="exportEvolucionResumen"></div>
+
+  <div class="section-label">Evolución mensual <button class="btn-export-png" onclick="exportPNG('exportEvolucionGrafica')">⬇ PNG</button></div>
+  <div id="exportEvolucionGrafica" class="chart-card">
+    <div class="ev-chips" id="evFamSel"></div>
+    <div class="ev-chips" id="evSerieSel"></div>
+    <div class="chart-legend" id="evLegend" style="margin-bottom:10px"></div>
+    <canvas id="evChart" style="width:100%;height:240px;display:block"></canvas>
+  </div>
+
+  <div class="section-label">Tabla maestra de KPIs <button class="btn-export-png" onclick="exportPNG('exportEvolucionTabla')">⬇ PNG</button></div>
+  <div class="breakdown" id="exportEvolucionTabla"></div>
+
+  <div class="section-label">Hallazgos HK por categoría <button class="btn-export-png" onclick="exportPNG('exportHallazgosCategoria')">⬇ PNG</button></div>
+  <div class="breakdown" id="exportHallazgosCategoria"></div>
+
+  <div class="section-label">Hallazgos HK por integrante <button class="btn-export-png" onclick="exportPNG('exportHallazgosIntegrante')">⬇ PNG</button></div>
+  <div class="breakdown" id="exportHallazgosIntegrante"></div>
 </main>
 </div>
 
@@ -1354,6 +1409,20 @@ function getKPIs(m){
 }
 
 // ═══════════════════════════════════════════════
+//  SEMÁFOROS (metas del Dashboard — compartidas con Evolución & YTD)
+// ═══════════════════════════════════════════════
+const SEM = {
+  csat:        v => v==null?'neutral':v>=4.5?'green':v>=4.3?'yellow':'red',
+  rt:          v => v!=null?(v<=60?'green':v<=80?'yellow':'red'):'neutral',
+  qa:          v => v!=null?(v>=50?'green':v>=40?'yellow':'red'):'neutral',
+  vsYTD:       d => d!=null?(d>=0.03?'green':d>=-0.05?'yellow':'red'):'neutral', // Staff / Limpieza vs YTD
+  limpiezas:   v => v!=null?(v>=400?'green':v>=360?'yellow':'red'):'neutral',
+  hallazgos:   v => v!=null?(v<20?'green':v<=25?'yellow':'red'):'neutral',
+  tiempo:      v => v!=null?(v<=24?'green':v<=32?'yellow':'red'):'neutral',
+  cumplimiento:v => v!=null?(v>=90?'green':v>=75?'yellow':'red'):'neutral'
+};
+
+// ═══════════════════════════════════════════════
 //  RENDER DASHBOARD
 // ═══════════════════════════════════════════════
 let appData=null, currentMes=null;
@@ -1384,7 +1453,7 @@ function renderDashboard(){
 
   // CSAT hero
   const cC=csat==null?'var(--muted)':csat>=4.5?'var(--green)':csat>=4.3?'var(--yellow)':'var(--red)';
-  const cS=csat==null?'neutral':csat>=4.5?'green':csat>=4.3?'yellow':'red';
+  const cS=SEM.csat(csat);
   document.getElementById('csatBig').textContent=csat!=null?csat.toFixed(2):'—';
   document.getElementById('csatBig').style.color=cC;
   document.getElementById('csatBadge').innerHTML=`<span class="badge ${cS}"><span class="dot ${cS}"></span>${cS==='green'?'Cumple meta ≥ 4.5':cS==='yellow'?'Por debajo de meta':'Bajo — requiere atención'}</span>`;
@@ -1414,12 +1483,12 @@ function renderDashboard(){
   const clD=cleanliness!=null?cleanliness-cleanBase:null;
 
   // Hosts cards
-  const rtSem=hosts.response_time!=null?(hosts.response_time<=60?'green':hosts.response_time<=80?'yellow':'red'):'neutral';
-  const qaSem=hosts.qa_completion!=null?(hosts.qa_completion>=50?'green':hosts.qa_completion>=40?'yellow':'red'):'neutral';
+  const rtSem=SEM.rt(hosts.response_time);
+  const qaSem=SEM.qa(hosts.qa_completion);
   const sSem=hosts.share_sofia!=null?(hosts.share_sofia>=40?'green':'red'):'neutral';
   const aSem=hosts.share_andrea!=null?(hosts.share_andrea>=40?'green':'red'):'neutral';
   const dSem=hosts.share_daniela!=null?(hosts.share_daniela>=40?'green':'red'):'neutral';
-  const staffSem=sD!=null?(sD>=0.03?'green':sD>=-0.05?'yellow':'red'):'neutral';
+  const staffSem=SEM.vsYTD(sD);
   document.getElementById('hostsCards').innerHTML=
     mkCard('Staff Score',staff!=null?staff.toFixed(2):'—',`YTD ${staffBase.toFixed(2)}`,staffSem,sD,'Meta: YTD Staff +0.03 pts')+
     mkCard('Response Time',hosts.response_time!=null?hosts.response_time.toFixed(0)+' min':'—','Fuente: Whistle',rtSem,null,'Meta: ≤ 60 min')+
@@ -1433,17 +1502,17 @@ function renderDashboard(){
     (!danielaActiva(currentMes)?'':mkCard('Share Daniela',hosts.share_daniela!=null?hosts.share_daniela.toFixed(1)+'%':'—',hosts.share_daniela!=null?`${ni(appData.meses.find(m=>m.mes===currentMes).hosts.aud_daniela)} de ${hosts.aud_total} aud.`:'',dSem,null,'Meta: > 40%'));
 
   // HK cards
-  const cleanSem=clD!=null?(clD>=0.03?'green':clD>=-0.05?'yellow':'red'):'neutral';
-  const lSem=hk.limpiezas!=null?(hk.limpiezas>=400?'green':hk.limpiezas>=360?'yellow':'red'):'neutral';
-  const hSem=hk.hallazgos!=null?(hk.hallazgos<20?'green':hk.hallazgos<=25?'yellow':'red'):'neutral';
+  const cleanSem=SEM.vsYTD(clD);
+  const lSem=SEM.limpiezas(hk.limpiezas);
+  const hSem=SEM.hallazgos(hk.hallazgos);
   document.getElementById('hkCards').innerHTML=
     mkCard('Cleanliness Score',cleanliness!=null?cleanliness.toFixed(2):'—',`YTD ${cleanBase.toFixed(2)}`,cleanSem,clD,'Meta: YTD Limpieza +0.03 pts')+
     mkCard('Total Limpiezas',hk.limpiezas!=null?hk.limpiezas.toString():'—','',lSem,null,'Meta: ≥ 400 por mes')+
     mkCard('% Hallazgos QA HK',hk.hallazgos!=null?hk.hallazgos.toFixed(1)+'%':'—','',hSem,null,'Meta: < 20%');
 
   // Mantenimiento cards
-  const tSem=mant.tiempo!=null?(mant.tiempo<=24?'green':mant.tiempo<=32?'yellow':'red'):'neutral';
-  const cSem=mant.cumplimiento!=null?(mant.cumplimiento>=90?'green':mant.cumplimiento>=75?'yellow':'red'):'neutral';
+  const tSem=SEM.tiempo(mant.tiempo);
+  const cSem=SEM.cumplimiento(mant.cumplimiento);
   document.getElementById('mantCards').innerHTML=
     mkCard('Tiempo Prom. Ticket',mant.tiempo!=null?mant.tiempo.toFixed(1)+' h':'—','Fuente: Whistle',tSem,null,'Meta: ≤ 24 h')+
     mkCard('% Tickets en Tiempo',mant.cumplimiento!=null?mant.cumplimiento.toFixed(1)+'%':'—','',cSem,null,'Meta: ≥ 90%');
@@ -3055,6 +3124,299 @@ function renderChart(){
 }
 
 // ═══════════════════════════════════════════════
+//  EVOLUCIÓN & YTD  (solo lectura · no llama a saveData)
+// ═══════════════════════════════════════════════
+// ── Capa de datos (funciones puras)
+// Ventana Ene → mes seleccionado, mismo año. Meses sin captura quedan con m:null.
+function ytdRange(meses, mesSel){
+  if(!mesSel) return [];
+  const [sm,sy]=mesSel.split(' '); const si=MONTHS_ES.indexOf(sm);
+  const out=[];
+  for(let i=0;i<=si;i++){
+    const label=MONTHS_ES[i]+' '+sy;
+    out.push({ i, label, short:MONTHS_ES[i].substring(0,3), m:(meses||[]).find(x=>x.mes===label)||null });
+  }
+  return out;
+}
+// Promedio simple de los meses con dato (null/NaN no cuentan como cero)
+function ytdSimple(vals){
+  const v=vals.filter(x=>x!=null&&!isNaN(x));
+  return { v: v.length?v.reduce((a,b)=>a+b,0)/v.length:null, n: v.length };
+}
+// Suma de los meses con dato
+function sumBy(vals){
+  const v=vals.filter(x=>x!=null&&!isNaN(x));
+  return { v: v.length?v.reduce((a,b)=>a+b,0):null, n: v.length };
+}
+// Normaliza nombres de integrante para sumar entre meses
+function normName(s){
+  return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/\s+/g,' ').trim().replace(/^\d+[-.\s]+/,'').trim();
+}
+function evEsc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const EV_FMT = {
+  s2:  v=>v!=null?v.toFixed(2):'—',
+  min: v=>v!=null?v.toFixed(0)+' min':'—',
+  pct: v=>v!=null?v.toFixed(1)+'%':'—',
+  h:   v=>v!=null?v.toFixed(1)+' h':'—',
+  int: v=>v!=null?Math.round(v).toLocaleString('es-MX'):'—'
+};
+const EV_COLORS = ['#168C95','#F9A058','#E26147','#38495D','#8A6FB0'];
+const EV_CHANNELS = [
+  {key:'booking',label:'Booking'},{key:'airbnb',label:'Airbnb'},{key:'expedia',label:'Expedia'},
+  {key:'google',label:'Google'},{key:'hw',label:'HostelWorld'}
+];
+let evFamily='csat', evSerie={};
+
+// Construye columnas + filas (valores mensuales siempre desde getKPIs / campos guardados)
+function evModel(){
+  const range=ytdRange(appData.meses, currentMes);
+  range.forEach(c=>{ c.k=null; if(c.m){ try{ c.k=getKPIs(c.m); }catch(e){ console.warn('getKPIs',c.label,e); } } });
+  const kSel=(range.length&&range[range.length-1].k)||null;
+  const col=fn=>range.map(c=>c.k?fn(c.k,c.m):null);
+  const nz=v=>v>0?v:null; // conteo 0 = sin dato
+
+  // YTD idénticos al Dashboard
+  const csatAcum=kSel?kSel.csatAcum:null;
+  const csatBase=csatAcum!=null?csatAcum:HIST_BASE.csat;
+  const ytdSC=getYTDStaffClean();
+  const staffBase=ytdSC.staff!=null?ytdSC.staff:HIST_BASE.staff;
+  const cleanBase=ytdSC.cleanliness!=null?ytdSC.cleanliness:HIST_BASE.cleanliness;
+  const nOf=vals=>vals.filter(v=>v!=null).length;
+
+  const rows=[];
+  const add=(fam,label,vals,ytd,fmt,sem,ytdSem,opt)=>rows.push(Object.assign({fam,label,vals,ytd,fmt,sem,ytdSem},opt||{}));
+
+  // CSAT general
+  const vC=col(k=>k.csat), vS=col(k=>k.staff), vL=col(k=>k.cleanliness);
+  add('csat','CSAT',vC,{v:csatBase,n:nOf(vC),note:csatAcum!=null?'Acum. ponderado':'Base histórica'},'s2',SEM.csat,SEM.csat,{unit:'/5'});
+  add('csat','Staff',vS,{v:staffBase,n:nOf(vS)},'s2',v=>SEM.vsYTD(v!=null?v-staffBase:null),null,{unit:'/5'});
+  add('csat','Limpieza',vL,{v:cleanBase,n:nOf(vL)},'s2',v=>SEM.vsYTD(v!=null?v-cleanBase:null),null,{unit:'/5'});
+
+  // Canales: score mensual /5 (YTD ponderado por reseñas con wavg) + n.º de reseñas (suma)
+  EV_CHANNELS.forEach(ch=>{
+    const sc=col(k=>k.sources[ch.key].overall), ct=col(k=>nz(k.sources[ch.key].count));
+    const items=range.map((c,i)=>({score:sc[i],count:ct[i]||0}));
+    add('canales',ch.label+' · score',sc,{v:wavg(items),n:items.filter(x=>x.score!=null&&x.count>0).length},'s2',null,null,{unit:'/5',chart:true});
+    add('canales',ch.label+' · reseñas',ct,sumBy(ct),'int',null,null,{sub:true});
+  });
+
+  // Hosts
+  const daniela=range.some(c=>c.m&&danielaActiva(c.label));
+  const vRT=col(k=>k.hosts.response_time), vQA=col(k=>k.hosts.qa_completion);
+  add('hosts','Response Time',vRT,ytdSimple(vRT),'min',SEM.rt,SEM.rt,{unit:'min',chart:true});
+  add('hosts','% Auditorías QA',vQA,ytdSimple(vQA),'pct',SEM.qa,SEM.qa,{unit:'%',chart:true});
+  const aud=key=>col((k,m)=>m.hosts?n(m.hosts[key]):null);
+  const aS=aud('aud_sofia'), aA=aud('aud_andrea');
+  add('hosts','Auditorías Sofía',aS,sumBy(aS),'int',null,null,{sub:true});
+  add('hosts','Auditorías Andrea',aA,sumBy(aA),'int',null,null,{sub:true});
+  if(daniela){ const aD=col((k,m)=>(m.hosts&&danielaActiva(m.mes))?n(m.hosts.aud_daniela):null); add('hosts','Auditorías Daniela',aD,sumBy(aD),'int',null,null,{sub:true}); }
+  const aT=col(k=>nz(k.hosts.aud_total));
+  add('hosts','Auditorías total',aT,sumBy(aT),'int',null,null,{unit:'aud.',chart:true});
+
+  // Housekeeping
+  const vLi=col(k=>k.hk.limpiezas), vCo=col((k,m)=>m.hk?n(m.hk.checkout):null), vCt=col((k,m)=>m.hk?n(m.hk.cortesias):null), vHa=col(k=>k.hk.hallazgos);
+  add('hk','Limpiezas',vLi,sumBy(vLi),'int',SEM.limpiezas,null,{unit:'limpiezas',chart:true});
+  add('hk','Checkout',vCo,sumBy(vCo),'int',null,null,{sub:true,unit:'limpiezas',chart:true});
+  add('hk','Cortesías',vCt,sumBy(vCt),'int',null,null,{sub:true,unit:'limpiezas',chart:true});
+  add('hk','% Hallazgos',vHa,ytdSimple(vHa),'pct',SEM.hallazgos,SEM.hallazgos,{unit:'%',chart:true});
+
+  // Mantenimiento
+  const vT=col(k=>k.mant.tiempo), vCu=col(k=>k.mant.cumplimiento);
+  add('mant','Tiempo prom. ticket',vT,ytdSimple(vT),'h',SEM.tiempo,SEM.tiempo,{unit:'h',chart:true});
+  add('mant','% Tickets en tiempo',vCu,ytdSimple(vCu),'pct',SEM.cumplimiento,SEM.cumplimiento,{unit:'%',chart:true});
+
+  return {range,rows};
+}
+
+const EV_FAMS = [
+  {key:'csat',label:'CSAT general'},{key:'canales',label:'Canales'},{key:'hosts',label:'Hosts'},
+  {key:'hk',label:'Housekeeping'},{key:'mant',label:'Mantenimiento'}
+];
+
+function renderEvolucion(){
+  const root=document.getElementById('evolucionRoot'); if(!root) return;
+  if(!appData||!currentMes||!appData.meses.length){ root.innerHTML='<div class="ytd-no-data">Sin datos.</div>'; return; }
+  const {range,rows}=evModel();
+  const yr=currentMes.split(' ')[1];
+  const win=`${range[0].short}–${range[range.length-1].short} ${yr}`;
+  document.getElementById('evWindow').textContent=win;
+  const nTxt=c=>`n = ${c} ${c===1?'mes':'meses'}`;
+
+  // 5.1 Tarjetas
+  const R=l=>rows.find(r=>r.label===l);
+  const qaTot=sumBy(range.map(c=>c.m&&c.m.qa?n(c.m.qa.total_details):null));
+  const rC=R('CSAT'), rLi=R('Limpiezas'), rCu=R('% Tickets en tiempo');
+  document.getElementById('exportEvolucionResumen').innerHTML=
+    mkCard('CSAT YTD',EV_FMT.s2(rC.ytd.v),nTxt(rC.ytd.n),SEM.csat(rC.ytd.v),null,rC.ytd.note+' · Meta ≥ 4.50')+
+    mkCard('Total limpiezas YTD',EV_FMT.int(rLi.ytd.v),nTxt(rLi.ytd.n),'neutral',null,'Suma '+win)+
+    mkCard('Total hallazgos YTD',EV_FMT.int(qaTot.v),nTxt(qaTot.n),'neutral',null,'Suma de detalles QA HK')+
+    mkCard('% Tickets en tiempo YTD',EV_FMT.pct(rCu.ytd.v),nTxt(rCu.ytd.n),SEM.cumplimiento(rCu.ytd.v),null,'Promedio simple · Meta ≥ 90%');
+
+  // 5.3 Tabla maestra
+  const head=`<tr><th class="ev-sticky">KPI</th>${range.map(c=>`<th class="num">${c.short}</th>`).join('')}<th class="num ev-ytd">YTD</th></tr>`;
+  let body='';
+  EV_FAMS.forEach(f=>{
+    const fr=rows.filter(r=>r.fam===f.key); if(!fr.length) return;
+    body+=`<tr class="ev-fam"><td class="ev-sticky" colspan="1">${f.label}</td><td colspan="${range.length+1}"></td></tr>`;
+    fr.forEach(r=>{
+      const cells=r.vals.map(v=>{
+        const dot=(r.sem&&v!=null)?`<span class="dot ${r.sem(v)}"></span>`:'';
+        return `<td class="num"><span class="ev-cell">${dot}${EV_FMT[r.fmt](v)}</span></td>`;
+      }).join('');
+      const yd=(r.ytdSem&&r.ytd.v!=null)?`<span class="dot ${r.ytdSem(r.ytd.v)}"></span>`:'';
+      body+=`<tr class="${r.sub?'ev-sub':''}"><td class="ev-sticky">${r.label}</td>${cells}<td class="num ev-ytd"><span class="ev-cell">${yd}${EV_FMT[r.fmt](r.ytd.v)}</span><div class="ev-n">${nTxt(r.ytd.n)}${r.ytd.note?' · '+r.ytd.note:''}</div></td></tr>`;
+    });
+  });
+  document.getElementById('exportEvolucionTabla').innerHTML=`<div class="ev-scroll"><table class="ev-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <div class="ev-foot">YTD: CSAT = acumulado ponderado del Dashboard · Staff/Limpieza = YTD ponderado del Dashboard · Score por canal = ponderado por reseñas · KPIs operativos = promedio simple de meses con dato · Conteos = suma. Celda sin dato: —</div>`;
+
+  // 5.4 / 5.5 Hallazgos
+  renderEvHallazgos(range);
+  // 5.2 Gráfica
+  renderEvChart(rows,range);
+}
+
+function renderEvHallazgos(range){
+  const noQA=range.filter(c=>!(c.m&&c.m.qa)).map(c=>c.short);
+  const foot=noQA.length?`<div class="ev-foot">Sin detalle de QA en: ${noQA.join(', ')}</div>`:'';
+  const hasQA=c=>!!(c.m&&c.m.qa);
+  const monthHead=range.map(c=>`<th class="num">${c.short}</th>`).join('');
+  const cellsOf=arr=>arr.map((v,i)=>`<td class="num">${hasQA(range[i])?(v||0):'—'}</td>`).join('');
+
+  // Por categoría (texto antes de " — ")
+  const cats={};
+  range.forEach((c,i)=>{
+    if(!hasQA(c)) return;
+    (c.m.qa.by_category||[]).forEach(([key,cnt])=>{
+      const s=String(key); const p=s.indexOf(' — ');
+      const cat=p>=0?s.slice(0,p):s, resp=p>=0?s.slice(p+3):'';
+      const o=cats[cat]||(cats[cat]={m:range.map(()=>0),det:{}});
+      o.m[i]+=ni(cnt);
+      const d=o.det[resp]||(o.det[resp]=range.map(()=>0)); d[i]+=ni(cnt);
+    });
+  });
+  const catList=Object.entries(cats).map(([cat,o])=>({cat,o,tot:o.m.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.tot-a.tot||a.cat.localeCompare(b.cat));
+  const colTot=range.map((c,i)=>catList.reduce((s,x)=>s+x.o.m[i],0));
+  let cb='';
+  catList.forEach((x,ci)=>{
+    cb+=`<tr class="ev-exp" onclick="evToggle(this,'evc${ci}')"><td class="ev-sticky"><span class="ev-caret">▸</span>${evEsc(x.cat)}</td>${cellsOf(x.o.m)}<td class="num ev-ytd">${x.tot}</td></tr>`;
+    Object.entries(x.o.det).map(([r,a])=>({r,a,t:a.reduce((p,q)=>p+q,0)})).sort((a,b)=>b.t-a.t).forEach(d=>{
+      cb+=`<tr class="ev-det evc${ci}" hidden><td class="ev-sticky">${evEsc(d.r||'(sin respuesta)')}</td>${cellsOf(d.a)}<td class="num ev-ytd">${d.t}</td></tr>`;
+    });
+  });
+  cb+=`<tr class="ev-total"><td class="ev-sticky">Total</td>${cellsOf(colTot)}<td class="num ev-ytd">${colTot.reduce((a,b)=>a+b,0)}</td></tr>`;
+  document.getElementById('exportHallazgosCategoria').innerHTML=catList.length
+    ?`<div class="ev-scroll"><table class="ev-table"><thead><tr><th class="ev-sticky">Categoría</th>${monthHead}<th class="num ev-ytd">Total YTD</th></tr></thead><tbody>${cb}</tbody></table></div>${foot}`
+    :`<div class="ytd-no-data">Sin detalle de QA en la ventana.</div>${foot}`;
+
+  // Por integrante (nombres normalizados)
+  const ppl={};
+  const get=(raw)=>{
+    const key=normName(raw)||'desconocido';
+    const o=ppl[key]||(ppl[key]={key,spell:{},m:range.map(()=>0),aud:0,det:{}});
+    o.spell[raw]=(o.spell[raw]||0)+1; return o;
+  };
+  range.forEach((c,i)=>{
+    if(!hasQA(c)) return;
+    (c.m.qa.by_cleaner||[]).forEach(row=>{
+      const [name,total,details]=row; const o=get(name);
+      o.m[i]+=ni(total);
+      (Array.isArray(details)?details:[]).forEach(([k,cnt])=>{
+        const s=String(k); const p=s.indexOf(' — '); const cat=p>=0?s.slice(0,p):s;
+        const d=o.det[cat]||(o.det[cat]=range.map(()=>0)); d[i]+=ni(cnt);
+      });
+    });
+    Object.entries(c.m.qa.audits_by_cleaner||{}).forEach(([name,cnt])=>{ get(name).aud+=ni(cnt); });
+  });
+  const isUnk=k=>k==='desconocido';
+  const pList=Object.values(ppl).map(o=>{
+    // Grafía más frecuente; en empate, la que no trae numeración y conserva acentos
+    const pref=s=>(/^\s*\d+[-.\s]+/.test(s)?0:2)+(/[^\x00-\x7F]/.test(s)?1:0);
+    const name=Object.entries(o.spell).sort((a,b)=>b[1]-a[1]||pref(b[0])-pref(a[0])||a[0].localeCompare(b[0]))[0][0].trim();
+    return Object.assign(o,{name,tot:o.m.reduce((a,b)=>a+b,0)});
+  }).sort((a,b)=>(isUnk(a.key)-isUnk(b.key))||(b.tot-a.tot)||a.name.localeCompare(b.name));
+  const pTot=range.map((c,i)=>pList.reduce((s,x)=>s+x.m[i],0));
+  let pb='';
+  pList.forEach((x,pi)=>{
+    const dets=Object.entries(x.det).map(([cat,a])=>({cat,a,t:a.reduce((p,q)=>p+q,0)})).sort((a,b)=>b.t-a.t);
+    pb+=`<tr class="${dets.length?'ev-exp':''}" ${dets.length?`onclick="evToggle(this,'evp${pi}')"`:''}><td class="ev-sticky">${dets.length?'<span class="ev-caret">▸</span>':'<span class="ev-caret"></span>'}${evEsc(x.name)}</td>${cellsOf(x.m)}<td class="num ev-ytd">${x.tot}</td><td class="num">${x.aud||'—'}</td></tr>`;
+    dets.forEach(d=>{ pb+=`<tr class="ev-det evp${pi}" hidden><td class="ev-sticky">${evEsc(d.cat)}</td>${cellsOf(d.a)}<td class="num ev-ytd">${d.t}</td><td></td></tr>`; });
+  });
+  pb+=`<tr class="ev-total"><td class="ev-sticky">Total</td>${cellsOf(pTot)}<td class="num ev-ytd">${pTot.reduce((a,b)=>a+b,0)}</td><td class="num">${pList.reduce((s,x)=>s+x.aud,0)||'—'}</td></tr>`;
+  document.getElementById('exportHallazgosIntegrante').innerHTML=pList.length
+    ?`<div class="ev-scroll"><table class="ev-table"><thead><tr><th class="ev-sticky">Integrante</th>${monthHead}<th class="num ev-ytd">Hallazgos YTD</th><th class="num">Auditorías YTD</th></tr></thead><tbody>${pb}</tbody></table></div>
+      <div class="ev-foot">Auditorías solo como contexto (no se calcula tasa). Nombres unificados sin acentos, mayúsculas ni numeración.</div>${foot}`
+    :`<div class="ytd-no-data">Sin detalle de QA en la ventana.</div>${foot}`;
+}
+
+function evToggle(tr,cls){
+  const open=!tr.classList.contains('open'); tr.classList.toggle('open',open);
+  const c=tr.querySelector('.ev-caret'); if(c&&c.textContent) c.textContent=open?'▾':'▸';
+  document.querySelectorAll('#tab-evolucion tr.'+cls).forEach(r=>r.hidden=!open);
+}
+
+// 5.2 Gráfica: familia → series (misma unidad juntas; si se mezclan unidades, chips de una serie a la vez)
+function evSetFamily(f){ evFamily=f; renderEvolucion(); }
+function evSetSerie(f,l){ evSerie[f]=l; renderEvolucion(); }
+function renderEvChart(rows,range){
+  document.getElementById('evFamSel').innerHTML=EV_FAMS.map(f=>`<button class="ev-chip ${f.key===evFamily?'on':''}" onclick="evSetFamily('${f.key}')">${f.label}</button>`).join('');
+  let fr=rows.filter(r=>r.fam===evFamily&&(r.fam==='csat'||r.chart));
+  const units=[...new Set(fr.map(r=>r.unit))];
+  let chips='';
+  if(units.length>1){
+    if(!fr.some(r=>r.label===evSerie[evFamily])) evSerie[evFamily]=fr[0].label;
+    chips=fr.map(r=>`<button class="ev-chip sm ${r.label===evSerie[evFamily]?'on':''}" onclick="evSetSerie('${evFamily}','${r.label.replace(/'/g,"\\'")}')">${r.label}</button>`).join('');
+    fr=fr.filter(r=>r.label===evSerie[evFamily]);
+  }
+  document.getElementById('evSerieSel').innerHTML=chips;
+  // Línea punteada = promedio YTD de la serie (para conteos, promedio mensual)
+  const series=fr.map((r,i)=>{
+    const ref=(r.fmt==='int')?ytdSimple(r.vals).v:r.ytd.v;
+    return {label:r.label.replace(' · score',''),vals:r.vals,ref,refLbl:r.fmt==='int'?'Prom. mensual':'YTD',fmt:r.fmt,color:EV_COLORS[i%EV_COLORS.length]};
+  });
+  document.getElementById('evLegend').innerHTML=series.map(s=>`<div class="legend-item"><div class="legend-dot" style="background:${s.color}"></div>${s.label}${s.ref!=null?` · ${s.refLbl} ${EV_FMT[s.fmt](s.ref)}`:''}</div>`).join('')+
+    `<div class="legend-item"><div class="legend-dot" style="background:repeating-linear-gradient(90deg,#6B7A8D 0 3px,transparent 3px 5px)"></div>Promedio YTD</div>`;
+
+  const canvas=document.getElementById('evChart'); if(!canvas) return;
+  const W=canvas.offsetWidth||800,H=240,dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const font='10px '+getComputedStyle(document.body).fontFamily;
+  const all=series.flatMap(s=>s.vals.concat([s.ref])).filter(v=>v!=null);
+  if(!all.length||!range.length){ctx.fillStyle='#6B7A8D';ctx.font='12px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='center';ctx.fillText('Sin datos en la ventana',W/2,H/2);return;}
+  // Escala Y automática
+  let lo=Math.min(...all),hi=Math.max(...all);
+  if(series[0].fmt==='s2'){lo=Math.min(lo,4.0);hi=Math.max(hi,5.0);}
+  if(hi===lo){hi+=1;lo=Math.max(0,lo-1);}
+  const span=hi-lo,raw=span/5,mag=Math.pow(10,Math.floor(Math.log10(raw))),step=[1,2,2.5,5,10].map(x=>x*mag).find(x=>x>=raw);
+  const minY=Math.floor(lo/step)*step,maxY=Math.ceil(hi/step)*step;
+  const PAD={top:14,right:16,bottom:30,left:48};
+  const gW=W-PAD.left-PAD.right,gH=H-PAD.top-PAD.bottom;
+  const toX=i=>range.length===1?PAD.left+gW/2:PAD.left+(i/(range.length-1))*gW;
+  const toY=v=>PAD.top+gH-((v-minY)/(maxY-minY))*gH;
+  const dec=Number.isInteger(step)?0:Number.isInteger(Math.round(step*1e6)/1e5)?1:2;
+  ctx.font=font;ctx.lineWidth=1;
+  for(let v=minY;v<=maxY+step/2;v+=step){
+    const y=toY(v);ctx.strokeStyle='#E4E7EC';ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+gW,y);ctx.stroke();
+    ctx.fillStyle='#7A8099';ctx.textAlign='right';ctx.fillText(v.toFixed(dec),PAD.left-6,y+3.5);
+  }
+  ctx.textAlign='center';ctx.fillStyle='#7A8099';
+  range.forEach((c,i)=>ctx.fillText(c.short,toX(i),H-PAD.bottom+14));
+  series.forEach(s=>{
+    if(s.ref!=null){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=s.color;ctx.globalAlpha=.7;ctx.lineWidth=1.5;
+      const y=toY(s.ref);ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+gW,y);ctx.stroke();ctx.restore();}
+    // Línea (se corta en meses sin dato)
+    ctx.strokeStyle=s.color;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.beginPath();
+    let pen=false;
+    s.vals.forEach((v,i)=>{ if(v==null){pen=false;return;} const x=toX(i),y=toY(v); pen?ctx.lineTo(x,y):ctx.moveTo(x,y); pen=true; });
+    ctx.stroke();
+    s.vals.forEach((v,i)=>{ if(v==null)return; ctx.beginPath();ctx.arc(toX(i),toY(v),4,0,Math.PI*2);ctx.fillStyle=s.color;ctx.fill(); });
+  });
+}
+
+// ═══════════════════════════════════════════════
 //  CAPTURE TAB
 // ═══════════════════════════════════════════════
 function updateCaptureTab(){
@@ -3817,6 +4179,7 @@ function switchTab(name,btn){
   if(name==='staff'||name==='housekeeping') renderDashboard();
   if(name==='staff') setTimeout(renderStaffCharts, 100);
   if(name==='housekeeping') setTimeout(renderHKPies, 200);
+  if(name==='evolucion') renderEvolucion();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -4261,10 +4624,12 @@ async function desbloquearVisor(pwd){
 document.getElementById('monthSelector').addEventListener('change',e=>{
   currentMes=e.target.value;renderDashboard();
   if(document.getElementById('tab-capture').classList.contains('active'))updateCaptureTab();
+  if(document.getElementById('tab-evolucion').classList.contains('active'))renderEvolucion();
 });
 if(!MODO_VISOR) document.getElementById('publishModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePublishModal();});
 ['newMonthModal','deleteModal'].forEach(id=>document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal(id);}));
 window.addEventListener('resize',renderChart);
+window.addEventListener('resize',()=>{ if(document.getElementById('tab-evolucion').classList.contains('active')) renderEvolucion(); });
 
 // ══ PIN LOCK ══
 const PIN_HASH_KEY = 'triverPINh';
